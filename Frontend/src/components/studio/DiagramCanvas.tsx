@@ -17,6 +17,9 @@ import { motion } from 'framer-motion';
 import { Maximize2 } from 'lucide-react';
 import { useStudioStore } from '@/store/useStore';
 import AWSNode from './AWSNode';
+import VPCGroupNode from './VPCGroupNode';
+import CloudComponentNode from './CloudComponentNode';
+import CustomEdge from './CustomEdge';
 import { AWSResource } from '@/store/useStore';
 
 const nodeTypes = {
