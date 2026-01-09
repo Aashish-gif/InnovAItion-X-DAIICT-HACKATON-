@@ -84,9 +84,9 @@ const HeroSection: React.FC = () => {
           transition={{ duration: 0.7, delay: 0.3 }}
           className="flex flex-col sm:flex-row items-center justify-center gap-4"
         >
-          <Link to="/dashboard">
+          <Link to="/login">
             <GradientButton size="lg" icon={<ArrowRight className="w-5 h-5" />} iconPosition="right">
-              Start Building Free
+              Get Started
             </GradientButton>
           </Link>
           <GradientButton variant="secondary" size="lg" icon={<Play className="w-5 h-5" />}>
