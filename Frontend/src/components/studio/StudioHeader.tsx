@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Cloud, Save, Play, Download, Share2, Loader2 } from 'lucide-react';
+import { ArrowLeft, Cloud, Save, Play, Download, Share2, Loader2, DollarSign } from 'lucide-react';
 import { GradientButton } from '@/components/ui/GradientButton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useStudioStore } from '@/store/useStore';
@@ -22,7 +22,7 @@ const StudioHeader: React.FC<StudioHeaderProps> = ({
   onManualSave,
   saveStatus: propSaveStatus,
 }) => {
-  const { terraformCode, nodes } = useStudioStore();
+  const { terraformCode, nodes, totalCost } = useStudioStore();
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>(propSaveStatus || 'saved');
   const [projectName, setProjectName] = useState(propProjectName || 'Untitled Project');
@@ -116,6 +116,11 @@ const StudioHeader: React.FC<StudioHeaderProps> = ({
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span>{nodes.length} resources</span>
+              <span>•</span>
+              <div className="flex items-center gap-1">
+                <DollarSign className="w-3 h-3 text-green-500" />
+                <span className="font-semibold text-green-600">${totalCost.toFixed(2)}/mo</span>
+              </div>
               <span>•</span>
               {saveStatus === 'saving' && (
                 <>

@@ -1,6 +1,7 @@
 import React, { memo, useState } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { Badge } from '@/components/ui/badge';
+import { estimateResourceCost, formatCostWithDetails } from '@/lib/costEstimator';
 
 // AWS Icon Components
 const EC2Icon = () => (
@@ -46,6 +47,9 @@ const VPCIcon = () => (
 const CloudComponentNode = ({ id, data, isConnectable }: NodeProps) => {
   const [hovered, setHovered] = useState(false);
   const { label = 'AWS Resource', type = 'ec2', status = 'running', config = {} } = data;
+
+  // Calculate resource cost
+  const cost = estimateResourceCost(type, config);
 
   // Get appropriate icon based on type
   const renderIcon = () => {
@@ -125,6 +129,11 @@ const CloudComponentNode = ({ id, data, isConnectable }: NodeProps) => {
       {/* Resource details */}
       <div className="text-center text-xs text-gray-500 mt-1 truncate w-full">
         {getResourceDetails()}
+      </div>
+      
+      {/* Cost display */}
+      <div className="text-center text-xs text-blue-600 font-semibold mt-1">
+        {formatCostWithDetails(cost)}
       </div>
       
       {/* Handles for connections */}

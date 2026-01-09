@@ -1,7 +1,7 @@
 import React from 'react';
 import Editor from '@monaco-editor/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Code, Copy, Check, RefreshCw, PanelRightClose, PanelRight, Edit2, Eye } from 'lucide-react';
+import { Code, Copy, Check, RefreshCw, PanelRightClose, PanelRight, Edit2, Eye, DollarSign } from 'lucide-react';
 import { useStudioStore } from '@/store/useStore';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { toast } from 'sonner';
@@ -14,7 +14,8 @@ const TerraformEditor: React.FC = () => {
     syncStatus, 
     isCodePanelCollapsed,
     setIsEditing,
-    toggleCodePanel 
+    toggleCodePanel,
+    totalCost
   } = useStudioStore();
   
   const [copied, setCopied] = React.useState(false);
@@ -64,30 +65,36 @@ const TerraformEditor: React.FC = () => {
               </StatusBadge>
             </div>
             
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setIsEditing(!isEditing)}
-                className={cn(
-                  'p-2 rounded-lg transition-all',
-                  isEditing 
-                    ? 'bg-primary/20 text-primary' 
-                    : 'text-muted-foreground hover:text-foreground hover:bg-glass/50'
-                )}
-              >
-                {isEditing ? <Edit2 className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-              <button
-                onClick={formatCode}
-                className="p-2 text-muted-foreground hover:text-foreground hover:bg-glass/50 rounded-lg transition-all"
-              >
-                <RefreshCw className="w-4 h-4" />
-              </button>
-              <button
-                onClick={copyToClipboard}
-                className="p-2 text-muted-foreground hover:text-foreground hover:bg-glass/50 rounded-lg transition-all"
-              >
-                {copied ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
-              </button>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 px-2 py-1 bg-green-500/10 rounded-md">
+                <DollarSign className="w-3 h-3 text-green-500" />
+                <span className="text-xs font-semibold text-green-600">${totalCost.toFixed(2)}/mo</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setIsEditing(!isEditing)}
+                  className={cn(
+                    'p-2 rounded-lg transition-all',
+                    isEditing 
+                      ? 'bg-primary/20 text-primary' 
+                      : 'text-muted-foreground hover:text-foreground hover:bg-glass/50'
+                  )}
+                >
+                  {isEditing ? <Edit2 className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+                <button
+                  onClick={formatCode}
+                  className="p-2 text-muted-foreground hover:text-foreground hover:bg-glass/50 rounded-lg transition-all"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={copyToClipboard}
+                  className="p-2 text-muted-foreground hover:text-foreground hover:bg-glass/50 rounded-lg transition-all"
+                >
+                  {copied ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
           </>
         )}

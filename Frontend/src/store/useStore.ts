@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { Node, Edge } from 'reactflow';
+import { estimateTotalCost } from '@/lib/costEstimator';
 
 export interface Project {
   id: string;
@@ -25,6 +26,10 @@ interface StudioState {
   edges: Edge[];
   selectedNode: string | null;
   
+  // Cost estimation
+  totalCost: number;
+  costBreakdown: Record<string, number>;
+  
   // Terraform state
   terraformCode: string;
   isEditing: boolean;
@@ -43,10 +48,13 @@ interface StudioState {
   setTerraformCode: (code: string) => void;
   setIsEditing: (isEditing: boolean) => void;
   setSyncStatus: (status: 'synced' | 'syncing' | 'error') => void;
+  setTotalCost: (cost: number) => void;
+  setCostBreakdown: (breakdown: Record<string, number>) => void;
   toggleSidebar: () => void;
   toggleCodePanel: () => void;
   updateNodeParent: (nodeId: string, parentId: string | null) => void;
   generateTerraform: () => void;
+  calculateCosts: () => void;
 }
 
 interface ProjectState {
@@ -59,6 +67,7 @@ interface ProjectState {
   deleteProject: (id: string) => void;
 }
 
+// Update the generateTerraformFromNodes function to calculate costs as well
 const generateTerraformFromNodes = (nodes: Node[]): string => {
   if (nodes.length === 0) {
     return `# Cloud Architect - Terraform Configuration
@@ -353,6 +362,8 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   nodes: [],
   edges: [],
   selectedNode: null,
+  totalCost: 0,
+  costBreakdown: {},
   terraformCode: generateTerraformFromNodes([]),
   isEditing: false,
   syncStatus: 'synced',
@@ -361,24 +372,29 @@ export const useStudioStore = create<StudioState>((set, get) => ({
 
   setNodes: (nodes) => {
     set({ nodes });
+    get().calculateCosts(); // Recalculate costs when nodes change
     get().generateTerraform();
   },
   setEdges: (edges) => set({ edges }),
   addNode: (node) => {
     const nodes = [...get().nodes, node];
     set({ nodes });
+    get().calculateCosts(); // Recalculate costs when adding a node
     get().generateTerraform();
   },
   removeNode: (nodeId) => {
     const nodes = get().nodes.filter((n) => n.id !== nodeId);
     const edges = get().edges.filter((e) => e.source !== nodeId && e.target !== nodeId);
     set({ nodes, edges, selectedNode: null });
+    get().calculateCosts(); // Recalculate costs when removing a node
     get().generateTerraform();
   },
   setSelectedNode: (nodeId) => set({ selectedNode: nodeId }),
   setTerraformCode: (code) => set({ terraformCode: code }),
   setIsEditing: (isEditing) => set({ isEditing }),
   setSyncStatus: (status) => set({ syncStatus: status }),
+  setTotalCost: (cost) => set({ totalCost: cost }),
+  setCostBreakdown: (breakdown) => set({ costBreakdown: breakdown }),
   toggleSidebar: () => set((state) => ({ isSidebarCollapsed: !state.isSidebarCollapsed })),
   toggleCodePanel: () => set((state) => ({ isCodePanelCollapsed: !state.isCodePanelCollapsed })),
   updateNodeParent: (nodeId: string, parentId: string | null) => {
@@ -389,7 +405,24 @@ export const useStudioStore = create<StudioState>((set, get) => ({
           : node
       )
     }));
+    get().calculateCosts(); // Recalculate costs when updating parent
     get().generateTerraform();
+  },
+  calculateCosts: () => {
+    const nodes = get().nodes;
+    const resources = nodes
+      .filter(node => node.data?.type && node.data?.config)
+      .map(node => ({
+        type: node.data.type,
+        config: node.data.config
+      }));
+    
+    const costResult = estimateTotalCost(resources);
+    
+    set({
+      totalCost: costResult.monthly,
+      costBreakdown: costResult.breakdown
+    });
   },
   generateTerraform: () => {
     set({ syncStatus: 'syncing' });
