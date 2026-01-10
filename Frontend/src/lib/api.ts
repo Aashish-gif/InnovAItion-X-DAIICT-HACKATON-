@@ -160,6 +160,21 @@ export const projectApi = {
     });
   },
 
+  // Deploy project to AWS
+  deploy: async (id: string, awsCredentials: any): Promise<any> => {
+    return apiRequest<any>(`/projects/${id}/deploy`, {
+      method: 'POST',
+      body: JSON.stringify({ awsCredentials }),
+    });
+  },
+
+  // Check deployment readiness
+  checkReadiness: async (id: string): Promise<any> => {
+    return apiRequest<any>(`/projects/${id}/deployment-readiness`, {
+      method: 'GET',
+    });
+  },
+
   // Delete a project
   delete: async (id: string): Promise<{ success: boolean; message: string }> => {
     return apiRequest<{ success: boolean; message: string }>(`/projects/${id}`, {

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Cloud, Save, Play, Download, Share2, Loader2, DollarSign } from 'lucide-react';
+import { ArrowLeft, Cloud, Save, Play, Download, Share2, Loader2, DollarSign, Upload } from 'lucide-react';
 import { GradientButton } from '@/components/ui/GradientButton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useStudioStore } from '@/store/useStore';
 import { toast } from 'sonner';
+import DeploymentModal from '@/components/studio/DeploymentModal';
 
 interface StudioHeaderProps {
   projectId?: string | null;
@@ -163,9 +164,23 @@ const StudioHeader: React.FC<StudioHeaderProps> = ({
         >
           {isSaving ? 'Saving...' : 'Save'}
         </GradientButton>
-        <GradientButton size="sm" icon={<Play className="w-4 h-4" />} onClick={handleDeploy}>
-          Deploy
-        </GradientButton>
+        {projectId && (
+          <DeploymentModal projectId={projectId}>
+            <GradientButton size="sm" icon={<Upload className="w-4 h-4" />}>
+              Deploy
+            </GradientButton>
+          </DeploymentModal>
+        )}
+        {!projectId && (
+          <GradientButton 
+            size="sm" 
+            icon={<Upload className="w-4 h-4" />} 
+            onClick={() => toast.info('Save your project first to enable deployment')}
+            disabled={true}
+          >
+            Deploy
+          </GradientButton>
+        )}
       </div>
     </motion.header>
   );

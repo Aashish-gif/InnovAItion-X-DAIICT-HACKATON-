@@ -8,6 +8,7 @@ import {
   generateTerraformFromProject,
   runSecurityAuditOnProject
 } from '../controllers/projectController.js';
+import { deployProject, checkDeploymentReadiness } from '../controllers/deploymentController.js';
 import { verifyToken } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -25,5 +26,9 @@ router.delete('/:id', deleteProject);  // DELETE /api/projects/:id - Delete proj
 // IaC Generation routes
 router.post('/:id/generate-terraform', generateTerraformFromProject); // POST /api/projects/:id/generate-terraform - Generate Terraform code from project
 router.post('/:id/run-security-audit', runSecurityAuditOnProject); // POST /api/projects/:id/run-security-audit - Run security audit on Terraform code
+
+// Deployment routes
+router.post('/:id/deploy', deployProject); // POST /api/projects/:id/deploy - Deploy project to AWS
+router.get('/:id/deployment-readiness', checkDeploymentReadiness); // GET /api/projects/:id/deployment-readiness - Check deployment readiness
 
 export default router;
