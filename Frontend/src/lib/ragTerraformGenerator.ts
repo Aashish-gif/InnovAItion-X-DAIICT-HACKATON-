@@ -673,6 +673,66 @@ resource "aws_vpc_endpoint" "{{name}}_s3_endpoint" {
   }
 }
 
+# VPC Endpoint for DynamoDB (to avoid NAT for DynamoDB traffic)
+resource "aws_vpc_endpoint" "{{name}}_dynamodb_endpoint" {
+  vpc_id       = aws_vpc.{{name}}.id
+  service_name = "com.amazonaws.\${var.aws_region}.dynamodb"
+  route_table_ids = [
+    aws_route_table.{{name}}_private.id
+  ]
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-dynamodb-vpc-endpoint"
+    Environment = var.environment
+    Terraform   = "true"
+  }
+}
+
+# VPC Endpoint for CloudWatch Logs (to avoid NAT for log traffic)
+resource "aws_vpc_endpoint" "{{name}}_logs_endpoint" {
+  vpc_id       = aws_vpc.{{name}}.id
+  service_name = "com.amazonaws.\${var.aws_region}.logs"
+  route_table_ids = [
+    aws_route_table.{{name}}_private.id
+  ]
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-logs-vpc-endpoint"
+    Environment = var.environment
+    Terraform   = "true"
+  }
+}
+
+# VPC Endpoint for SSM (to avoid NAT for SSM traffic)
+resource "aws_vpc_endpoint" "{{name}}_ssm_endpoint" {
+  vpc_id       = aws_vpc.{{name}}.id
+  service_name = "com.amazonaws.\${var.aws_region}.ssm"
+  route_table_ids = [
+    aws_route_table.{{name}}_private.id
+  ]
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-ssm-vpc-endpoint"
+    Environment = var.environment
+    Terraform   = "true"
+  }
+}
+
+# VPC Endpoint for Secrets Manager (to avoid NAT for secrets traffic)
+resource "aws_vpc_endpoint" "{{name}}_secretsmanager_endpoint" {
+  vpc_id       = aws_vpc.{{name}}.id
+  service_name = "com.amazonaws.\${var.aws_region}.secretsmanager"
+  route_table_ids = [
+    aws_route_table.{{name}}_private.id
+  ]
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-secretsmanager-vpc-endpoint"
+    Environment = var.environment
+    Terraform   = "true"
+  }
+}
+
 # DHCP Options Set
 resource "aws_vpc_dhcp_options" "{{name}}_dhcp" {
   domain_name         = var.aws_region == "us-east-1" ? "ec2.internal" : "\${var.aws_region}.compute.internal"
@@ -1147,7 +1207,7 @@ resource "aws_lambda_function" "{{name}}" {
   function_name    = "\${var.environment}-\${var.application_name}-{{name}}"
   role             = aws_iam_role.lambda_exec.arn
   handler          = "{{handler}}"
-  runtime          = "{{runtime}}"
+  runtime          = "{{runtime}}"  # Recommended: python3.13 or python3.14 for 2026
   timeout          = {{timeout}}
   memory_size      = {{memory_size}}
 
@@ -1166,15 +1226,15 @@ resource "aws_lambda_function" "{{name}}" {
 
   # VPC Configuration for accessing private resources
   vpc_config {
-    subnet_ids         = [aws_subnet.private_1.id, aws_subnet.private_2.id]
+    subnet_ids         = [aws_subnet.{{parentNode}}_private_1.id, aws_subnet.{{parentNode}}_private_2.id]
     security_group_ids = [aws_security_group.{{name}}_lambda_sg.id]
   }
 
   tracing_config {
-    mode = "{{tracing_mode}}"
+    mode = "{{tracing_mode}}"  # Default: "Active" for production
   }
 
-  reserved_concurrent_executions = {{reserved_concurrent_executions}}
+  reserved_concurrent_executions = {{reserved_concurrent_executions}}  # Default: -1 for unlimited
 
   {{#layers}}
   layers = [
@@ -1217,32 +1277,10 @@ resource "aws_iam_role" "lambda_exec" {
   }
 }
 
-# Required IAM policy for VPC access
+# Required IAM policy for VPC access (includes EC2 network interface permissions)
 resource "aws_iam_role_policy_attachment" "lambda_vpc_access" {
   role       = aws_iam_role.lambda_exec.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
-}
-# Additional policy for accessing private EC2 instance
-resource "aws_iam_role_policy" "lambda_ec2_access" {
-  name = "\${var.environment}-\${var.application_name}-lambda-ec2-access"
-  role = aws_iam_role.lambda_exec.name
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "ec2:CreateNetworkInterface",
-          "ec2:DescribeNetworkInterfaces",
-          "ec2:DeleteNetworkInterface",
-          "ec2:AssignPrivateIpAddresses",
-          "ec2:UnassignPrivateIpAddresses"
-        ]
-        Resource = "*"
-      }
-    ]
-  })
 }
 
 # Lambda source code archive
@@ -1264,22 +1302,109 @@ resource "aws_cloudwatch_log_group" "{{name}}_logs" {
   }
 }
 
-# Security Group for Lambda to access private EC2 instance
+# Security Group for Lambda to access private resources
 resource "aws_security_group" "{{name}}_lambda_sg" {
   name_prefix = "\${var.environment}-\${var.application_name}-{{name}}-lambda-"
   description = "Security group for Lambda function {{name}} to access private resources"
-  vpc_id      = var.vpc_id  # This should be passed as a variable
+  vpc_id      = aws_vpc.{{parentNode}}.id  # Reference to the actual VPC resource
 
-  # Outbound traffic to private EC2 instance on port 8080
+  # Allow outbound to private EC2 instances inside VPC (any port/TCP)
   egress {
-    from_port   = 8080
-    to_port     = 8080
+    from_port   = 0
+    to_port     = 65535
     protocol    = "tcp"
-    cidr_blocks = [var.vpc_cidr_block]  # Reference to VPC CIDR variable
-    description = "Allow outbound to private EC2 instance on port 8080"
+    cidr_blocks = [aws_vpc.{{parentNode}}.cidr_block]  # Reference to actual VPC CIDR
+    description = "Allow outbound to private resources within VPC"
   }
 
-  # Outbound traffic to internet (for general access)
+  # Allow outbound to AWS services via VPC endpoints (cost optimization)
+  egress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    prefix_list_ids = [aws_vpc_endpoint.{{parentNode}}_s3_endpoint.prefix_list_id]  # S3 endpoint
+    description = "Allow outbound to S3 via VPC endpoint"
+  }
+
+  # Allow outbound to DynamoDB via VPC endpoint
+  egress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    prefix_list_ids = [aws_vpc_endpoint.{{parentNode}}_dynamodb_endpoint.prefix_list_id]  # DynamoDB endpoint
+    description = "Allow outbound to DynamoDB via VPC endpoint"
+  }
+
+  # Allow outbound to CloudWatch Logs via VPC endpoint
+  egress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    prefix_list_ids = [aws_vpc_endpoint.{{parentNode}}_logs_endpoint.prefix_list_id]  # CloudWatch Logs endpoint
+    description = "Allow outbound to CloudWatch Logs via VPC endpoint"
+  }
+
+  # Allow outbound to SSM via VPC endpoint
+  egress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    prefix_list_ids = [aws_vpc_endpoint.{{parentNode}}_ssm_endpoint.prefix_list_id]  # SSM endpoint
+    description = "Allow outbound to SSM via VPC endpoint"
+  }
+
+  # Allow outbound to Secrets Manager via VPC endpoint
+  egress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    prefix_list_ids = [aws_vpc_endpoint.{{parentNode}}_secretsmanager_endpoint.prefix_list_id]  # Secrets Manager endpoint
+    description = "Allow outbound to Secrets Manager via VPC endpoint"
+  }
+
+  # Allow outbound to internet for AWS services only (minimize NAT usage)
+  egress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow outbound HTTPS to internet for AWS services"
+  }
+
+  tags = {
+    Name        = "{{name}}-lambda-sg"
+    Environment = var.environment
+    ManagedBy   = "CloudArchitectAI"
+    Terraform   = "true"
+    Application = var.application_name
+  }
+}
+
+# Security Group for private EC2 instance (allow inbound from Lambda)
+resource "aws_security_group" "{{name}}_ec2_sg" {
+  name_prefix = "\${var.environment}-\${var.application_name}-{{name}}-ec2-"
+  description = "Security group for private EC2 instance accessible by Lambda"
+  vpc_id      = aws_vpc.{{parentNode}}.id
+
+  # Inbound from Lambda security group
+  ingress {
+    from_port       = 8080
+    to_port         = 8080
+    protocol        = "tcp"
+    security_groups = [aws_security_group.{{name}}_lambda_sg.id]  # Allow only Lambda SG
+    description     = "Allow inbound from Lambda function on port 8080"
+  }
+
+  # Inbound for common ports if needed
+  ingress {
+    from_port       = 443
+    to_port         = 443
+    protocol        = "tcp"
+    security_groups = [aws_security_group.{{name}}_lambda_sg.id]
+    description     = "Allow inbound HTTPS from Lambda function"
+  }
+
+  # Outbound to internet
   egress {
     from_port   = 0
     to_port     = 0
@@ -1289,7 +1414,7 @@ resource "aws_security_group" "{{name}}_lambda_sg" {
   }
 
   tags = {
-    Name        = "{{name}}-lambda-sg"
+    Name        = "{{name}}-ec2-sg"
     Environment = var.environment
     ManagedBy   = "CloudArchitectAI"
     Terraform   = "true"
@@ -1325,10 +1450,10 @@ resource "aws_lambda_provisioned_concurrency_config" "{{name}}_provisioned_concu
 # Lambda URL Configuration (if needed)
 resource "aws_lambda_function_url" "{{name}}_url" {
   function_name      = aws_lambda_function.{{name}}.function_name
-  authorization_type = "{{url_auth_type}}"
+  authorization_type = "{{url_auth_type}}"  # Default: "AWS_IAM" for security
 
   cors {
-    allow_credentials = {{url_cors_allow_credentials}}
+    allow_credentials = {{url_cors_allow_credentials}}  # Default: false
     allow_origins     = var.allowed_origins
     allow_methods     = ["*"]
     allow_headers     = ["*"]
@@ -1946,7 +2071,7 @@ variable "vpc_cidr_block" {
               templateData[field] = 'index.handler';
               break;
             case 'runtime':
-              templateData[field] = 'python3.9';
+              templateData[field] = 'python3.13';  // Updated to latest Python runtime for 2026
               break;
             case 'timeout':
               templateData[field] = 30;
@@ -1994,10 +2119,10 @@ variable "vpc_cidr_block" {
               templateData[field] = 7;
               break;
             case 'tracing_mode':
-              templateData[field] = 'PassThrough';
+              templateData[field] = 'Active';  // Default to Active for production monitoring
               break;
             case 'reserved_concurrent_executions':
-              templateData[field] = 100;
+              templateData[field] = -1;  // Default to unlimited (-1) for production
               break;
             case 'ami_type':
               templateData[field] = 'amazon_linux';
@@ -2012,10 +2137,10 @@ variable "vpc_cidr_block" {
               templateData[field] = 100;
               break;
             case 'url_auth_type':
-              templateData[field] = 'AWS_IAM';
+              templateData[field] = 'AWS_IAM';  // Default to AWS_IAM for security
               break;
             case 'url_cors_allow_credentials':
-              templateData[field] = false;
+              templateData[field] = false;  // Default to false for security
               break;
             case 'parameter_group_family':
               templateData[field] = 'postgres15';
@@ -2040,7 +2165,7 @@ variable "vpc_cidr_block" {
           } else if (matchedType === 'aws_db_instance') {
             templateData.vpc_security_group_ids = `aws_security_group.${parentResourceName}_sg.id`;
           } else if (matchedType === 'aws_lambda_function') {
-            templateData.vpc_id = 'var.vpc_id'; // Reference to the VPC ID variable
+            templateData.parentNode = parentResourceName; // Reference to the parent VPC resource name
           }
         }
       }
@@ -2060,55 +2185,15 @@ variable "vpc_cidr_block" {
 
   // Add outputs at the end
   terraformCode += `# Outputs
-{{#vpcNodes}}
-output "vpc_id" {
-  description = "ID of the VPC"
-  value       = aws_vpc.main.id
-}
-
-output "vpc_cidr_block" {
-  description = "CIDR block of the VPC"
-  value       = aws_vpc.main.cidr_block
-}
-
-output "public_subnet_ids" {
-  description = "IDs of the public subnets"
-  value       = [aws_subnet.main_public_1.id, aws_subnet.main_public_2.id]
-}
-
-output "private_subnet_ids" {
-  description = "IDs of the private subnets"
-  value       = [aws_subnet.main_private_1.id, aws_subnet.main_private_2.id]
-}
-{{/vpcNodes}}
-
-{{#otherNodes}}
-output "instance_ids" {
-  description = "IDs of the EC2 instances"
-  value       = [for instance in aws_instance.main : instance.id]
-}
-
-output "db_endpoint" {
-  description = "Connection endpoint for the database"
-  value       = aws_db_instance.main.endpoint
-  sensitive   = true
-}
-
-output "s3_bucket_name" {
-  description = "Name of the S3 bucket"
-  value       = aws_s3_bucket.main.bucket
-}
-
 output "lambda_function_arns" {
   description = "ARNs of the Lambda functions"
-  value       = [for lambda in aws_lambda_function.main : lambda.arn]
+  value       = [for lambda in aws_lambda_function.* : lambda.arn]
 }
 
-output "iam_role_arns" {
-  description = "ARNs of the IAM roles"
-  value       = [for role in aws_iam_role.main : role.arn]
+output "lambda_function_names" {
+  description = "Names of the Lambda functions"
+  value       = [for lambda in aws_lambda_function.* : lambda.function_name]
 }
-{{/otherNodes}}
 
 `;
 
