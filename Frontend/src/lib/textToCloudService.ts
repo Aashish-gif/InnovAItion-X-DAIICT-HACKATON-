@@ -3,6 +3,7 @@ import { generateTerraformWithRag } from './ragTerraformGenerator';
 
 interface TextToCloudResult {
   nodes: Node[];
+  edges: any[];
   terraformCode: string;
   success: boolean;
   message?: string;
@@ -191,6 +192,7 @@ export const convertTextToCloud = async (text: string): Promise<TextToCloudResul
     
     return {
       nodes,
+      edges: [],
       terraformCode,
       success: true,
       message: `Generated ${nodes.length} infrastructure components from your description`
@@ -199,6 +201,7 @@ export const convertTextToCloud = async (text: string): Promise<TextToCloudResul
     console.error('Error in text-to-cloud conversion:', error);
     return {
       nodes: [],
+      edges: [],
       terraformCode: '',
       success: false,
       message: 'Failed to convert text to cloud infrastructure. Please try again.'

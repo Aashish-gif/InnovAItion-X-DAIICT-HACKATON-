@@ -1,11 +1,12 @@
 import React from 'react';
 import Editor from '@monaco-editor/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Code, Copy, Check, RefreshCw, PanelRightClose, PanelRight, Edit2, Eye, DollarSign } from 'lucide-react';
+import { Code, Copy, Check, RefreshCw, PanelRightClose, PanelRight, Edit2, Eye, DollarSign, GitBranch } from 'lucide-react';
 import { useStudioStore } from '@/store/useStore';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { parseHCLtoNodes } from '@/logic/TerraformParser';
 
 const TerraformEditor: React.FC = () => {
   const { 
@@ -15,7 +16,9 @@ const TerraformEditor: React.FC = () => {
     isCodePanelCollapsed,
     setIsEditing,
     toggleCodePanel,
-    totalCost
+    totalCost,
+    setNodes,
+    setEdges
   } = useStudioStore();
   
   const [copied, setCopied] = React.useState(false);
@@ -29,6 +32,18 @@ const TerraformEditor: React.FC = () => {
   
   const formatCode = () => {
     toast.success('Code formatted');
+  };
+  
+  const syncDiagramFromCode = () => {
+    try {
+      const { nodes, edges } = parseHCLtoNodes(terraformCode);
+      setNodes(nodes);
+      setEdges(edges);
+      toast.success(`${nodes.length} nodes and ${edges.length} connections synced from code`);
+    } catch (error) {
+      console.error('Error parsing HCL code:', error);
+      toast.error('Failed to sync diagram from code');
+    }
   };
   
   return (
@@ -89,6 +104,13 @@ const TerraformEditor: React.FC = () => {
                   <RefreshCw className="w-4 h-4" />
                 </button>
                 <button
+                  onClick={syncDiagramFromCode}
+                  className="p-2 text-muted-foreground hover:text-foreground hover:bg-glass/50 rounded-lg transition-all"
+                  title="Sync Diagram from Code"
+                >
+                  <GitBranch className="w-4 h-4" />
+                </button>
+                <button
                   onClick={copyToClipboard}
                   className="p-2 text-muted-foreground hover:text-foreground hover:bg-glass/50 rounded-lg transition-all"
                 >
@@ -114,6 +136,10 @@ const TerraformEditor: React.FC = () => {
               defaultLanguage="hcl"
               value={terraformCode}
               theme="vs-dark"
+              onChange={(value) => {
+                // Update the store with the new code
+                useStudioStore.getState().setTerraformCode(value || '');
+              }}
               options={{
                 readOnly: !isEditing,
                 minimap: { enabled: false },

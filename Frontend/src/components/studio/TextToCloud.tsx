@@ -15,7 +15,7 @@ interface TextToCloudProps {
 const TextToCloud: React.FC<TextToCloudProps> = ({ className }) => {
   const [inputText, setInputText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const { setNodes, setTerraformCode } = useStudioStore();
+  const { setNodes, setEdges, setTerraformCode } = useStudioStore();
 
   const handleConvert = async () => {
     if (!inputText.trim()) {
@@ -35,6 +35,7 @@ const TextToCloud: React.FC<TextToCloudProps> = ({ className }) => {
         
         // Update both nodes and terraform code
         setNodes(updatedNodes);
+        setEdges(result.edges);
         setTerraformCode(result.terraformCode);
         
         toast.success(`Successfully created ${result.nodes.length} infrastructure components!`);

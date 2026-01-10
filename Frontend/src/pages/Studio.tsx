@@ -6,6 +6,7 @@ import AWSResourcesBar from '@/components/studio/AWSResourcesBar';
 import DiagramCanvas from '@/components/studio/DiagramCanvas';
 import TerraformEditor from '@/components/studio/TerraformEditor';
 import ToolsPanel from '@/components/studio/ToolsPanel';
+import ChatComposer from '@/components/studio/ChatComposer';
 import { useStudioStore } from '@/store/useStore';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -92,14 +93,21 @@ const Studio: React.FC = () => {
         {/* Left Sidebar - AI Infrastructure Generator and Drift Detection (Collapsible) */}
         <ToolsPanel projectId={projectId || mongoProjectId || undefined} />
         
-        {/* Main Canvas Area */}
+        {/* Main Content Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Horizontal AWS Resources Bar */}
           <AWSResourcesBar />
           
-          {/* Diagram Canvas */}
-          <div className="flex-1">
-            <DiagramCanvas />
+          {/* Diagram Canvas and Chat Composer */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1">
+              <DiagramCanvas />
+            </div>
+            
+            {/* Chat Composer - Positioned in bottom-left corner */}
+            <div className="h-80 border-t border-glass-border bg-background/80 backdrop-blur-lg">
+              <ChatComposer />
+            </div>
           </div>
         </div>
         
