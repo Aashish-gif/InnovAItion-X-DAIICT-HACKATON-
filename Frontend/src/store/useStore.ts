@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { Node, Edge } from 'reactflow';
 import { estimateTotalCost } from '@/lib/costEstimator';
+import { generateTerraformWithRag } from '@/lib/ragTerraformGenerator';
 
 export interface Project {
   id: string;
@@ -55,7 +56,7 @@ interface StudioState {
   toggleCodePanel: () => void;
   toggleToolsPanel: () => void;
   updateNodeParent: (nodeId: string, parentId: string | null) => void;
-  generateTerraform: () => void;
+  generateTerraform: () => Promise<void>;
   calculateCosts: () => void;
 }
 
@@ -70,294 +71,9 @@ interface ProjectState {
 }
 
 // Update the generateTerraformFromNodes function to calculate costs as well
-const generateTerraformFromNodes = (nodes: Node[]): string => {
-  if (nodes.length === 0) {
-    return `# Cloud Architect - Terraform Configuration
-# Drag AWS resources to the canvas to generate code
-
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-  }
-}
-
-provider "aws" {
-  region = "us-east-1"
-}
-
-# Your infrastructure code will appear here...
-`;
-  }
-
-  let code = `# Cloud Architect - Terraform Configuration
-# Generated automatically from visual diagram
-
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-  }
-}
-
-provider "aws" {
-  region = "us-east-1"
-}
-
-`;
-
-  // First, generate VPC resources (parent containers)
-  const vpcNodes = nodes.filter(node => 
-    node.data?.terraformType === 'aws_vpc' || 
-    node.data?.type === 'vpc' || 
-    node.type === 'vpcGroup'
-  );
-
-  vpcNodes.forEach((node) => {
-    const resourceData = node.data as { label: string; terraformType: string; resourceType: string; config?: any };
-    const resourceName = resourceData.label.toLowerCase().replace(/[^a-z0-9]/g, '_');
-    const config = resourceData.config || {};
-    
-    code += `resource "aws_vpc" "${resourceName}" {
-  cidr_block           = "${config.cidr_block || '10.0.0.0/16'}"
-  enable_dns_hostnames = ${config.enable_dns_hostnames || true}
-  enable_dns_support   = ${config.enable_dns_support || true}
-
-  tags = {
-    Name        = "${resourceData.label}"
-    Environment = "production"
-    ManagedBy   = "CloudArchitect"
-  }
-}
-
-`;
-  });
-
-  // Then generate child resources that belong to VPCs
-  const childNodes = nodes.filter(node => node.parentNode);
-  const regularNodes = nodes.filter(node => !node.parentNode && 
-    node.data?.terraformType !== 'aws_vpc' && 
-    node.data?.type !== 'vpc' && 
-    node.type !== 'vpcGroup'
-  );
-
-  // Process all non-VPC nodes
-  [...regularNodes, ...childNodes].forEach((node) => {
-    const resourceData = node.data as { label: string; terraformType: string; resourceType: string; type: string; config?: any };
-    const resourceName = resourceData.label.toLowerCase().replace(/[^a-z0-9]/g, '_');
-    
-    // Determine if this resource belongs to a VPC
-    const parentVpc = node.parentNode ? 
-      nodes.find(parent => parent.id === node.parentNode && 
-        (parent.data?.terraformType === 'aws_vpc' || 
-         parent.data?.type === 'vpc' || 
-         parent.type === 'vpcGroup')) : null;
-    
-    // Get the resource configuration
-    const config = resourceData.config || {};
-    
-    switch (resourceData.terraformType) {
-      case 'aws_vpc':
-        // Already handled above
-        break;
-      case 'aws_subnet':
-        code += `resource "aws_subnet" "${resourceName}" {
-  vpc_id                  = aws_vpc.main.id
-  cidr_block              = "${config.cidr_block || '10.0.1.0/24'}"
-  availability_zone       = "${config.availability_zone || 'us-east-1a'}"
-  map_public_ip_on_launch = true
-
-  tags = {
-    Name        = "${resourceData.label}"
-    Environment = "production"
-    ManagedBy   = "CloudArchitect"
-  }
-}
-
-`;
-        break;
-      case 'aws_instance':
-        code += `resource "aws_instance" "${resourceName}" {
-  ami           = "${config.ami || 'ami-0c55b159cbfafe1f0'}"
-  instance_type = "${config.instance_type || 't3.micro'}"
-  key_name      = "${config.key_name || ''}"
-  ${parentVpc ? `vpc_security_group_ids = [aws_security_group.default.id]
-  subnet_id              = aws_subnet.main.id` : ''}
-
-  tags = {
-    Name        = "${resourceData.label}"
-    Environment = "production"
-    ManagedBy   = "CloudArchitect"
-  }
-}
-
-`;
-        break;
-      case 'aws_lambda_function':
-        code += `resource "aws_lambda_function" "${resourceName}" {
-  filename         = "${config.filename || 'lambda_function.zip'}"
-  function_name    = "${config.function_name || resourceName}"
-  role             = "${config.role || ''}"
-  handler          = "${config.handler || 'index.handler'}"
-  runtime          = "${config.runtime || 'python3.9'}"
-  timeout          = ${config.timeout || 30}
-  memory_size      = ${config.memory_size || 128}
-  ${parentVpc ? `vpc_config {
-    subnet_ids         = [aws_subnet.main.id]
-    security_group_ids = [aws_security_group.default.id]
-  }` : ''}
-
-  tags = {
-    Name        = "${resourceData.label}"
-    Environment = "production"
-    ManagedBy   = "CloudArchitect"
-  }
-}
-
-`;
-        break;
-      case 'aws_s3_bucket':
-        const bucketName = config.bucket || `${resourceName}-bucket-${Date.now()}`;
-        code += `resource "aws_s3_bucket" "${resourceName}" {
-  bucket = "${bucketName}"
-
-  tags = {
-    Name        = "${resourceData.label}"
-    Environment = "production"
-    ManagedBy   = "CloudArchitect"
-  }
-}
-
-resource "aws_s3_bucket_versioning" "${resourceName}_versioning" {
-  bucket = aws_s3_bucket.${resourceName}.id
-  versioning_configuration {
-    status = "${config.versioning?.enabled ? 'Enabled' : 'Suspended'}"
-  }
-}
-
-`;
-        break;
-      case 'aws_db_instance':
-        code += `resource "aws_db_instance" "${resourceName}" {
-  identifier                = "${config.identifier || resourceName}"
-  allocated_storage         = ${config.allocated_storage || 20}
-  max_allocated_storage     = ${config.max_allocated_storage || 100}
-  storage_type              = "${config.storage_type || 'gp2'}"
-  engine                    = "${config.engine || 'postgres'}"
-  engine_version            = "${config.engine_version || '15.4'}"
-  instance_class            = "${config.instance_class || 'db.t3.micro'}"
-  db_name                   = "${config.db_name || 'mydb'}"
-  username                  = "${config.username || 'admin'}"
-  password                  = "${config.password || 'CHANGEME'}"
-  skip_final_snapshot       = ${config.skip_final_snapshot || true}
-  ${parentVpc ? `vpc_security_group_ids = [aws_security_group.default.id]` : ''}
-
-  tags = {
-    Name        = "${resourceData.label}"
-    Environment = "production"
-    ManagedBy   = "CloudArchitect"
-  }
-}
-
-`;
-        break;
-      case 'aws_dynamodb_table':
-        code += `resource "aws_dynamodb_table" "${resourceName}" {
-  name           = "${config.name || resourceName}"
-  billing_mode   = "${config.billing_mode || 'PAY_PER_REQUEST'}"
-  hash_key       = "${config.hash_key || 'id'}"
-
-  attribute {
-    name = "${config.hash_key || 'id'}"
-    type = "S"
-  }
-
-  tags = {
-    Name        = "${resourceData.label}"
-    Environment = "production"
-    ManagedBy   = "CloudArchitect"
-  }
-}
-
-`;
-        break;
-      case 'aws_security_group':
-        code += `resource "aws_security_group" "${resourceName}" {
-  name        = "${config.name || resourceName}"
-  description = "${config.description || `Security group for ${resourceData.label}`}"
-  ${parentVpc ? 'vpc_id      = aws_vpc.main.id' : 'vpc_id      = aws_vpc.main.id'}
-
-  ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name        = "${resourceData.label}"
-    Environment = "production"
-    ManagedBy   = "CloudArchitect"
-  }
-}
-
-`;
-        break;
-      case 'aws_lb':
-        code += `resource "aws_lb" "${resourceName}" {
-  name               = "${config.name || resourceName}"
-  internal           = ${config.internal || false}
-  load_balancer_type = "${config.load_balancer_type || 'application'}"
-  security_groups    = [aws_security_group.default.id]
-  subnets            = [aws_subnet.main.id]
-
-  tags = {
-    Name        = "${resourceData.label}"
-    Environment = "production"
-    ManagedBy   = "CloudArchitect"
-  }
-}
-
-`;
-        break;
-      case 'aws_sqs_queue':
-        code += `resource "aws_sqs_queue" "${resourceName}" {
-  name                              = "${config.name || resourceName}.fifo"
-  fifo_queue                        = true
-  visibility_timeout_seconds        = ${config.visibility_timeout_seconds || 30}
-
-  tags = {
-    Name        = "${resourceData.label}"
-    Environment = "production"
-    ManagedBy   = "CloudArchitect"
-  }
-}
-
-`;
-        break;
-      default:
-        code += `# Resource: ${resourceData.label}
-# Type: ${resourceData.terraformType}
-# Parent VPC: ${parentVpc ? parentVpc.data?.label : 'None'}
-# Configuration: ${JSON.stringify(config, null, 2)}
-# TODO: Add configuration
-
-`;
-    }
-  });
-
-  return code;
+const generateTerraformFromNodes = async (nodes: Node[]): Promise<string> => {
+  // Use the RAG-based generator instead of the hardcoded implementation
+  return await generateTerraformWithRag(nodes);
 };
 
 export const useStudioStore = create<StudioState>((set, get) => ({
@@ -366,14 +82,14 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   selectedNode: null,
   totalCost: 0,
   costBreakdown: {},
-  terraformCode: generateTerraformFromNodes([]),
+  terraformCode: '# Loading...',
   isEditing: false,
   syncStatus: 'synced',
   isSidebarCollapsed: false,
   isCodePanelCollapsed: false,
+  isToolsPanelCollapsed: false,
 
   setNodes: (nodes) => {
-    // Create a new array with updated nodes to ensure React re-renders
     // Use structuredClone for deep copy to avoid reference issues
     const newNodes = nodes.map(node => ({
       ...node,
@@ -382,21 +98,30 @@ export const useStudioStore = create<StudioState>((set, get) => ({
     }));
     set({ nodes: newNodes });
     get().calculateCosts(); // Recalculate costs when nodes change
-    get().generateTerraform();
+    // Use setTimeout to avoid blocking the UI during async operation
+    setTimeout(() => {
+      get().generateTerraform();
+    }, 0);
   },
   setEdges: (edges) => set({ edges }),
   addNode: (node) => {
     const nodes = [...get().nodes, node];
     set({ nodes });
     get().calculateCosts(); // Recalculate costs when adding a node
-    get().generateTerraform();
+    // Use setTimeout to avoid blocking the UI during async operation
+    setTimeout(() => {
+      get().generateTerraform();
+    }, 0);
   },
   removeNode: (nodeId) => {
     const nodes = get().nodes.filter((n) => n.id !== nodeId);
     const edges = get().edges.filter((e) => e.source !== nodeId && e.target !== nodeId);
     set({ nodes, edges, selectedNode: null });
     get().calculateCosts(); // Recalculate costs when removing a node
-    get().generateTerraform();
+    // Use setTimeout to avoid blocking the UI during async operation
+    setTimeout(() => {
+      get().generateTerraform();
+    }, 0);
   },
   setSelectedNode: (nodeId) => set({ selectedNode: nodeId }),
   setTerraformCode: (code) => set({ terraformCode: code }),
@@ -416,7 +141,10 @@ export const useStudioStore = create<StudioState>((set, get) => ({
       )
     }));
     get().calculateCosts(); // Recalculate costs when updating parent
-    get().generateTerraform();
+    // Use setTimeout to avoid blocking the UI during async operation
+    setTimeout(() => {
+      get().generateTerraform();
+    }, 0);
   },
   calculateCosts: () => {
     const nodes = get().nodes;
@@ -434,13 +162,18 @@ export const useStudioStore = create<StudioState>((set, get) => ({
       costBreakdown: costResult.breakdown
     });
   },
-  generateTerraform: () => {
+  async generateTerraform() {
     set({ syncStatus: 'syncing' });
-    const code = generateTerraformFromNodes(get().nodes);
-    // Reduce the timeout to make the status update more responsive
-    setTimeout(() => {
+    try {
+      const code = await generateTerraformFromNodes(get().nodes);
       set({ terraformCode: code, syncStatus: 'synced' });
-    }, 100); // Reduced from 300ms to 100ms
+    } catch (error) {
+      console.error('Error generating Terraform:', error);
+      set({ 
+        terraformCode: '# Error generating Terraform code\n# Please try again',
+        syncStatus: 'error' 
+      });
+    }
   },
 }));
 
