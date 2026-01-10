@@ -17,244 +17,1623 @@ interface RagKnowledgeBase {
   };
 }
 
-// Knowledge base with Terraform templates and examples
+// Updated knowledge base with production-ready AWS resource configurations
 const knowledgeBase: RagKnowledgeBase = {
   'aws_instance': {
-    terraformTemplate: `resource "aws_instance" "{{name}}" {
-  ami           = "{{ami}}"
-  instance_type = "{{instance_type}}"
-{{#vpc_security_group_ids}}
-  vpc_security_group_ids = [{{vpc_security_group_ids}}]
-{{/vpc_security_group_ids}}
-{{#subnet_id}}
-  subnet_id = "{{subnet_id}}"
-{{/subnet_id}}
+    terraformTemplate: `# EC2 Instance
+resource "aws_instance" "{{name}}" {
+  ami                         = data.aws_ami.{{ami_type}}.id
+  instance_type               = "{{instance_type}}"
+  key_name                   = aws_key_pair.{{name}}_key.key_name
+  vpc_security_group_ids     = [aws_security_group.{{name}}_sg.id]
+  subnet_id                  = aws_subnet.{{name}}_subnet.id
+  associate_public_ip_address = {{associate_public_ip}}
 
-  tags = {
-    Name = "{{name}}"
-    ManagedBy = "CloudArchitectAI"
+  root_block_device {
+    volume_type           = "gp3"
+    volume_size           = {{root_volume_size}}
+    delete_on_termination = true
+    encrypted             = true
   }
-}`,
-    examples: [
-      `resource "aws_instance" "{{name}}" {
-  ami           = "{{ami}}"
-  instance_type = "{{instance_type}}"
-  key_name      = "{{key_name}}"
 
-  vpc_security_group_ids = [aws_security_group.web.id]
-  subnet_id              = aws_subnet.public.id
+  ebs_block_device {
+    device_name = "/dev/sdf"
+    volume_type = "gp3"
+    volume_size = {{ebs_volume_size}}
+    encrypted   = true
+  }
+
+  monitoring = true
+  ebs_optimized = true
+
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 2
+    instance_metadata_tags      = "enabled"
+  }
+
+  user_data = base64encode(templatefile("\${path.module}/templates/user-data.sh", {
+    environment = var.environment
+    instance_name = "{{name}}"
+  }))
 
   tags = {
     Name        = "{{name}}"
-    Environment = "production"
+    Environment = var.environment
     ManagedBy   = "CloudArchitectAI"
+    Terraform   = "true"
+    Application = var.application_name
+  }
+}
+
+# Data source for latest Amazon Linux 2 AMI
+data "aws_ami" "{{ami_type}}" {
+  most_recent = true
+  owners      = ["amazon"]
+
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
+
+# SSH Key Pair
+resource "aws_key_pair" "{{name}}_key" {
+  key_name   = "\${var.environment}-\${var.application_name}-{{name}}-key"
+  public_key = var.public_key
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-{{name}}-key"
+    Environment = var.environment
+    Terraform   = "true"
+  }
+}
+
+# CloudWatch Log Group for instance logs
+resource "aws_cloudwatch_log_group" "{{name}}_logs" {
+  name              = "/aws/ec2/\${var.environment}/\${var.application_name}/{{name}}"
+  retention_in_days = 30
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-{{name}}-logs"
+    Environment = var.environment
+    Terraform   = "true"
+  }
+}
+
+# IAM Instance Profile (if needed)
+resource "aws_iam_instance_profile" "{{name}}_profile" {
+  name = "\${var.environment}-\${var.application_name}-{{name}}-profile"
+  role = aws_iam_role.ec2_role.name
+}
+
+# IAM Role for EC2 instances
+resource "aws_iam_role" "ec2_role" {
+  name = "\${var.environment}-\${var.application_name}-ec2-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-ec2-role"
+    Environment = var.environment
+    Terraform   = "true"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "ec2_ssm_policy" {
+  role       = aws_iam_role.ec2_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+resource "aws_iam_role_policy_attachment" "ec2_cloudwatch_policy" {
+  role       = aws_iam_role.ec2_role.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+}`,
+    examples: [
+      `resource "aws_instance" "web_server" {
+  ami                         = data.aws_ami.amazon_linux.id
+  instance_type               = "t3.medium"
+  key_name                   = aws_key_pair.web_key.key_name
+  vpc_security_group_ids     = [aws_security_group.web_sg.id]
+  subnet_id                  = aws_subnet.public.id
+  associate_public_ip_address = true
+
+  root_block_device {
+    volume_type           = "gp3"
+    volume_size           = 50
+    delete_on_termination = true
+    encrypted             = true
+  }
+
+  ebs_block_device {
+    device_name = "/dev/sdf"
+    volume_type = "gp3"
+    volume_size = 100
+    encrypted   = true
+  }
+
+  monitoring = true
+  ebs_optimized = true
+
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 2
+    instance_metadata_tags      = "enabled"
+  }
+
+  user_data = base64encode(templatefile("\${path.module}/templates/user-data.sh", {
+    environment = var.environment
+    instance_name = "web-server"
+  }))
+
+  tags = {
+    Name        = "web-server"
+    Environment = var.environment
+    ManagedBy   = "CloudArchitectAI"
+    Terraform   = "true"
+    Application = var.application_name
   }
 }`
     ],
     bestPractices: [
-      'Always specify AMI ID explicitly',
-      'Use instance types appropriate for workload',
-      'Attach to proper VPC and subnets',
-      'Include security groups',
-      'Tag resources appropriately'
+      'Use IMDSv2 (HTTP tokens required)',
+      'Enable encryption at rest for all volumes',
+      'Use gp3 volumes for better performance control',
+      'Enable detailed monitoring',
+      'Use data sources for dynamic values',
+      'Use variables for environment-specific values',
+      'Implement proper tagging strategy',
+      'Use user_data for configuration management',
+      'Enable metadata options for security',
+      'Attach IAM roles instead of storing credentials',
+      'Use CloudWatch for logging and monitoring',
+      'Implement proper network segmentation'
     ],
     requiredFields: ['ami', 'instance_type'],
-    optionalFields: ['key_name', 'vpc_security_group_ids', 'subnet_id', 'tags']
+    optionalFields: ['key_name', 'vpc_security_group_ids', 'subnet_id', 'root_block_device', 'metadata_options', 'tags']
   },
   'aws_s3_bucket': {
-    terraformTemplate: `resource "aws_s3_bucket" "{{name}}" {
-  bucket = "{{bucket_name}}"
-
-  tags = {
-    Name = "{{name}}"
-    ManagedBy = "CloudArchitectAI"
-  }
-}
-
-resource "aws_s3_bucket_versioning" "{{name}}_versioning" {
-  bucket = aws_s3_bucket.{{name}}.id
-  versioning_configuration {
-    status = "{{versioning_status}}"
-  }
-}`,
-    examples: [
-      `resource "aws_s3_bucket" "{{name}}" {
-  bucket = "{{bucket_name}}"
+    terraformTemplate: `# S3 Bucket
+resource "aws_s3_bucket" "{{name}}" {
+  bucket = "\${var.environment}-\${var.application_name}-{{name}}-\${random_string.suffix.result}"
 
   tags = {
     Name        = "{{name}}"
-    Environment = "production"
+    Environment = var.environment
     ManagedBy   = "CloudArchitectAI"
+    Terraform   = "true"
+    Application = var.application_name
   }
 }
 
+# S3 Bucket Versioning
 resource "aws_s3_bucket_versioning" "{{name}}_versioning" {
   bucket = aws_s3_bucket.{{name}}.id
   versioning_configuration {
     status = "{{versioning_status}}"
+  }
+}
+
+# S3 Bucket Server-Side Encryption
+resource "aws_s3_bucket_server_side_encryption_configuration" "{{name}}_encryption" {
+  bucket = aws_s3_bucket.{{name}}.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm     = "aws:kms"
+      kms_master_key_id = aws_kms_key.{{name}}.arn
+    }
+  }
+}
+
+# S3 Bucket Public Access Block
+resource "aws_s3_bucket_public_access_block" "{{name}}_public_access" {
+  bucket = aws_s3_bucket.{{name}}.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# S3 Bucket Lifecycle Configuration
+resource "aws_s3_bucket_lifecycle_configuration" "{{name}}_lifecycle" {
+  bucket = aws_s3_bucket.{{name}}.id
+
+  rule {
+    id     = "transition-to-ia"
+    status = "Enabled"
+
+    transition {
+      days          = 30
+      storage_class = "STANDARD_IA"
+    }
+
+    transition {
+      days          = 90
+      storage_class = "GLACIER"
+    }
+
+    expiration {
+      days = 365
+    }
+  }
+
+  rule {
+    id     = "abort-incomplete-multipart"
+    status = "Enabled"
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
+  }
+}
+
+# S3 Bucket Policy (if needed)
+resource "aws_s3_bucket_policy" "{{name}}_policy" {
+  bucket = aws_s3_bucket.{{name}}.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AllowSSLRequestsOnly"
+        Effect = "Deny"
+        Principal = "*"
+        Action = "s3:*"
+        Resource = [
+          aws_s3_bucket.{{name}}.arn,
+          "\${aws_s3_bucket.{{name}}.arn}/*"
+        ]
+        Condition = {
+          Bool = {
+            "aws:SecureTransport": "false"
+          }
+        }
+      }
+    ]
+  })
+}
+
+# S3 Bucket CORS Configuration
+resource "aws_s3_bucket_cors_configuration" "{{name}}_cors" {
+  bucket = aws_s3_bucket.{{name}}.id
+
+  cors_rule {
+    allowed_headers = ["*"]
+    allowed_methods = ["GET", "HEAD"]
+    allowed_origins = var.allowed_origins
+    expose_headers  = ["ETag"]
+    max_age_seconds = 3000
+  }
+}
+
+# KMS Key for S3 Encryption
+resource "aws_kms_key" "{{name}}" {
+  description             = "KMS key for \${var.environment} \${var.application_name} S3 bucket"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "Enable IAM User Permissions"
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::\${data.aws_caller_identity.current.account_id}:root"
+        }
+        Action   = "kms:*"
+        Resource = "*"
+      }
+    ]
+  })
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-s3-kms-key"
+    Environment = var.environment
+    Terraform   = "true"
+  }
+}
+
+# KMS Alias
+resource "aws_kms_alias" "{{name}}_alias" {
+  name          = "alias/\${var.environment}/\${var.application_name}/s3-key"
+  target_key_id = aws_kms_key.{{name}}.id
+}
+
+# Random string for unique bucket name
+resource "random_string" "suffix" {
+  length  = 8
+  special = false
+  upper   = false
+  number  = true
+}
+
+# Data source for current AWS account
+data "aws_caller_identity" "current" {}
+
+# CloudWatch Event Rule for S3 notifications (if needed)
+resource "aws_cloudwatch_event_rule" "{{name}}_s3_events" {
+  name        = "\${var.environment}-\${var.application_name}-s3-events"
+  description = "Capture S3 bucket events for \${var.environment} \${var.application_name}"
+
+  event_pattern = jsonencode({
+    source = ["aws.s3"]
+    detail-type = ["S3 Object Created", "S3 Object Deleted"]
+    detail = {
+      bucket = {
+        name = [aws_s3_bucket.{{name}}.id]
+      }
+    }
+  })
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-s3-events"
+    Environment = var.environment
+    Terraform   = "true"
+  }
+}`,
+    examples: [
+      `resource "aws_s3_bucket" "image_storage" {
+  bucket = "\${var.environment}-\${var.application_name}-image-storage-\${random_string.suffix.result}"
+
+  tags = {
+    Name        = "image-storage"
+    Environment = var.environment
+    ManagedBy   = "CloudArchitectAI"
+    Terraform   = "true"
+    Application = var.application_name
+  }
+}
+
+resource "aws_s3_bucket_versioning" "image_storage_versioning" {
+  bucket = aws_s3_bucket.image_storage.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "image_storage_encryption" {
+  bucket = aws_s3_bucket.image_storage.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm     = "aws:kms"
+      kms_master_key_id = aws_kms_key.image_storage.arn
+    }
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "image_storage_public_access" {
+  bucket = aws_s3_bucket.image_storage.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_kms_key" "image_storage" {
+  description             = "KMS key for \${var.environment} \${var.application_name} image storage"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-image-storage-kms-key"
+    Environment = var.environment
+    Terraform   = "true"
   }
 }`
     ],
     bestPractices: [
-      'Enable versioning for important buckets',
-      'Use appropriate bucket naming conventions',
-      'Configure lifecycle policies',
-      'Set up server-side encryption'
+      'Enable versioning for data protection',
+      'Enforce encryption at rest using KMS',
+      'Block public access by default',
+      'Implement lifecycle policies for cost optimization',
+      'Require SSL transport',
+      'Use proper tagging strategy',
+      'Implement cross-region replication for critical data',
+      'Set up CORS configuration for web applications',
+      'Use CloudWatch for monitoring and alerting',
+      'Implement proper access logging'
     ],
     requiredFields: ['bucket'],
-    optionalFields: ['tags', 'versioning', 'lifecycle_rule', 'server_side_encryption_configuration']
+    optionalFields: ['tags', 'versioning', 'encryption', 'public_access_block', 'lifecycle_rule', 'policy', 'cors']
   },
   'aws_vpc': {
-    terraformTemplate: `resource "aws_vpc" "{{name}}" {
-  cidr_block           = "{{cidr_block}}"
-  enable_dns_hostnames = {{enable_dns_hostnames}}
-  enable_dns_support   = {{enable_dns_support}}
-
-  tags = {
-    Name = "{{name}}"
-    ManagedBy = "CloudArchitectAI"
-  }
-}`,
-    examples: [
-      `resource "aws_vpc" "{{name}}" {
-  cidr_block           = "{{cidr_block}}"
-  enable_dns_hostnames = {{enable_dns_hostnames}}
-  enable_dns_support   = {{enable_dns_support}}
+    terraformTemplate: `# VPC
+resource "aws_vpc" "{{name}}" {
+  cidr_block                       = "{{cidr_block}}"
+  enable_dns_hostnames             = {{enable_dns_hostnames}}
+  enable_dns_support               = {{enable_dns_support}}
+  assign_generated_ipv6_cidr_block = {{assign_ipv6_cidr_block}}
 
   tags = {
     Name        = "{{name}}"
-    Environment = "production"
+    Environment = var.environment
     ManagedBy   = "CloudArchitectAI"
+    Terraform   = "true"
+    Application = var.application_name
+  }
+}
+
+# Internet Gateway
+resource "aws_internet_gateway" "{{name}}_igw" {
+  vpc_id = aws_vpc.{{name}}.id
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-igw"
+    Environment = var.environment
+    Terraform   = "true"
+  }
+}
+
+# Public Subnets
+resource "aws_subnet" "{{name}}_public_1" {
+  vpc_id                  = aws_vpc.{{name}}.id
+  cidr_block              = "{{public_cidr_block_1}}"
+  availability_zone       = "\${var.aws_region}a"
+  map_public_ip_on_launch = true
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-public-subnet-1"
+    Environment = var.environment
+    Terraform   = "true"
+    "kubernetes.io/role/elb" = "1"
+  }
+}
+
+resource "aws_subnet" "{{name}}_public_2" {
+  vpc_id                  = aws_vpc.{{name}}.id
+  cidr_block              = "{{public_cidr_block_2}}"
+  availability_zone       = "\${var.aws_region}b"
+  map_public_ip_on_launch = true
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-public-subnet-2"
+    Environment = var.environment
+    Terraform   = "true"
+    "kubernetes.io/role/elb" = "1"
+  }
+}
+
+# Private Subnets
+resource "aws_subnet" "{{name}}_private_1" {
+  vpc_id            = aws_vpc.{{name}}.id
+  cidr_block        = "{{private_cidr_block_1}}"
+  availability_zone = "\${var.aws_region}a"
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-private-subnet-1"
+    Environment = var.environment
+    Terraform   = "true"
+    "kubernetes.io/role/internal-elb" = "1"
+  }
+}
+
+resource "aws_subnet" "{{name}}_private_2" {
+  vpc_id            = aws_vpc.{{name}}.id
+  cidr_block        = "{{private_cidr_block_2}}"
+  availability_zone = "\${var.aws_region}b"
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-private-subnet-2"
+    Environment = var.environment
+    Terraform   = "true"
+    "kubernetes.io/role/internal-elb" = "1"
+  }
+}
+
+# NAT Gateway EIP
+resource "aws_eip" "{{name}}_nat_eip" {
+  domain = "vpc"
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-nat-eip"
+    Environment = var.environment
+    Terraform   = "true"
+  }
+}
+
+# NAT Gateway
+resource "aws_nat_gateway" "{{name}}_nat_gw" {
+  allocation_id = aws_eip.{{name}}_nat_eip.id
+  subnet_id     = aws_subnet.{{name}}_public_1.id
+  connectivity_type = "public"
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-nat-gw"
+    Environment = var.environment
+    Terraform   = "true"
+  }
+}
+
+# Route Table for Public Subnets
+resource "aws_route_table" "{{name}}_public" {
+  vpc_id = aws_vpc.{{name}}.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.{{name}}_igw.id
+  }
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-public-route-table"
+    Environment = var.environment
+    Terraform   = "true"
+  }
+}
+
+# Route Table for Private Subnets
+resource "aws_route_table" "{{name}}_private" {
+  vpc_id = aws_vpc.{{name}}.id
+
+  route {
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.{{name}}_nat_gw.id
+  }
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-private-route-table"
+    Environment = var.environment
+    Terraform   = "true"
+  }
+}
+
+# Route Table Associations for Public Subnets
+resource "aws_route_table_association" "{{name}}_public_1_assoc" {
+  subnet_id      = aws_subnet.{{name}}_public_1.id
+  route_table_id = aws_route_table.{{name}}_public.id
+}
+
+resource "aws_route_table_association" "{{name}}_public_2_assoc" {
+  subnet_id      = aws_subnet.{{name}}_public_2.id
+  route_table_id = aws_route_table.{{name}}_public.id
+}
+
+# Route Table Associations for Private Subnets
+resource "aws_route_table_association" "{{name}}_private_1_assoc" {
+  subnet_id      = aws_subnet.{{name}}_private_1.id
+  route_table_id = aws_route_table.{{name}}_private.id
+}
+
+resource "aws_route_table_association" "{{name}}_private_2_assoc" {
+  subnet_id      = aws_subnet.{{name}}_private_2.id
+  route_table_id = aws_route_table.{{name}}_private.id
+}
+
+# Default Security Group
+resource "aws_default_security_group" "{{name}}_default" {
+  vpc_id = aws_vpc.{{name}}.id
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-default-sg"
+    Environment = var.environment
+    Terraform   = "true"
+  }
+}
+
+# VPC Flow Logs
+resource "aws_flow_log" "{{name}}_flow_log" {
+  log_destination_type = "cloud-watch-logs"
+  log_group_name       = aws_cloudwatch_log_group.vpc_flow_logs.name
+  resource_type        = "VPC"
+  traffic_type         = "ALL"
+  vpc_id              = aws_vpc.{{name}}.id
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-vpc-flow-logs"
+    Environment = var.environment
+    Terraform   = "true"
+  }
+}
+
+# CloudWatch Log Group for VPC Flow Logs
+resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
+  name              = "/aws/vpc/\${var.environment}/\${var.application_name}/flow-logs"
+  retention_in_days = 30
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-vpc-flow-logs-group"
+    Environment = var.environment
+    Terraform   = "true"
+  }
+}
+
+# VPC Endpoint for S3 (to avoid NAT for S3 traffic)
+resource "aws_vpc_endpoint" "{{name}}_s3_endpoint" {
+  vpc_id       = aws_vpc.{{name}}.id
+  service_name = "com.amazonaws.\${var.aws_region}.s3"
+  route_table_ids = [
+    aws_route_table.{{name}}_private.id
+  ]
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-s3-vpc-endpoint"
+    Environment = var.environment
+    Terraform   = "true"
+  }
+}
+
+# DHCP Options Set
+resource "aws_vpc_dhcp_options" "{{name}}_dhcp" {
+  domain_name         = var.aws_region == "us-east-1" ? "ec2.internal" : "\${var.aws_region}.compute.internal"
+  domain_name_servers = ["AmazonProvidedDNS"]
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-dhcp-options"
+    Environment = var.environment
+    Terraform   = "true"
+  }
+}
+
+# DHCP Options Association
+resource "aws_vpc_dhcp_options_association" "{{name}}_dhcp_assoc" {
+  vpc_id          = aws_vpc.{{name}}.id
+  dhcp_options_id = aws_vpc_dhcp_options.{{name}}_dhcp.id
+}`,
+    examples: [
+      `resource "aws_vpc" "main" {
+  cidr_block                       = "10.0.0.0/16"
+  enable_dns_hostnames             = true
+  enable_dns_support               = true
+  assign_generated_ipv6_cidr_block = true
+
+  tags = {
+    Name        = "main"
+    Environment = var.environment
+    ManagedBy   = "CloudArchitectAI"
+    Terraform   = "true"
+    Application = var.application_name
+  }
+}
+
+resource "aws_internet_gateway" "main_igw" {
+  vpc_id = aws_vpc.main.id
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-igw"
+    Environment = var.environment
+    Terraform   = "true"
+  }
+}
+
+resource "aws_subnet" "public_1" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = "10.0.1.0/24"
+  availability_zone       = "\${var.aws_region}a"
+  map_public_ip_on_launch = true
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-public-subnet-1"
+    Environment = var.environment
+    Terraform   = "true"
+  }
+}
+
+resource "aws_subnet" "private_1" {
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = "10.0.2.0/24"
+  availability_zone = "\${var.aws_region}a"
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-private-subnet-1"
+    Environment = var.environment
+    Terraform   = "true"
+  }
+}
+
+resource "aws_eip" "nat_eip" {
+  domain = "vpc"
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-nat-eip"
+    Environment = var.environment
+    Terraform   = "true"
+  }
+}
+
+resource "aws_nat_gateway" "nat_gw" {
+  allocation_id = aws_eip.nat_eip.id
+  subnet_id     = aws_subnet.public_1.id
+  connectivity_type = "public"
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-nat-gw"
+    Environment = var.environment
+    Terraform   = "true"
   }
 }`
     ],
     bestPractices: [
-      'Use appropriate CIDR blocks',
-      'Enable DNS hostnames and support',
-      'Tag VPCs consistently',
-      'Consider IP address planning'
+      'Enable IPv6 support',
+      'Use dedicated subnets for different purposes',
+      'Implement NAT gateways for private subnets',
+      'Use centralized routing tables',
+      'Tag resources consistently',
+      'Implement VPC flow logs for security monitoring',
+      'Use AWS Transit Gateway for complex networking',
+      'Create VPC endpoints to avoid NAT for service traffic',
+      'Implement proper DHCP options',
+      'Use multiple AZs for high availability'
     ],
     requiredFields: ['cidr_block'],
-    optionalFields: ['enable_dns_hostnames', 'enable_dns_support', 'tags', 'instance_tenancy']
+    optionalFields: ['enable_dns_hostnames', 'enable_dns_support', 'assign_generated_ipv6_cidr_block', 'tags', 'instance_tenancy']
   },
   'aws_security_group': {
-    terraformTemplate: `resource "aws_security_group" "{{name}}" {
-  name        = "{{name}}"
+    terraformTemplate: `# Security Group
+resource "aws_security_group" "{{name}}" {
+  name_prefix = "\${var.environment}-\${var.application_name}-{{name}}-"
   description = "{{description}}"
   vpc_id      = "{{vpc_id}}"
 
-{{#ingress_rules}}
-  ingress {
-    from_port   = {{from_port}}
-    to_port     = {{to_port}}
-    protocol    = "{{protocol}}"
-    cidr_blocks = [{{cidr_blocks}}]
+  revoke_rules_on_delete = true
+
+  tags = {
+    Name        = "{{name}}"
+    Environment = var.environment
+    ManagedBy   = "CloudArchitectAI"
+    Terraform   = "true"
+    Application = var.application_name
   }
+}
+
+# Ingress Rules
+{{#ingress_rules}}
+resource "aws_security_group_rule" "{{name}}_ingress_{{@index}}" {
+  type                     = "ingress"
+  from_port                = {{from_port}}
+  to_port                  = {{to_port}}
+  protocol                 = "{{protocol}}"
+  description              = "{{description}}"
+  security_group_id        = aws_security_group.{{name}}.id
+
+  {{#cidr_blocks}}
+  cidr_blocks              = [{{cidr_blocks}}]
+  {{/cidr_blocks}}
+  {{#source_security_group_id}}
+  source_security_group_id = {{source_security_group_id}}
+  {{/source_security_group_id}}
+}
 {{/ingress_rules}}
 
+# Egress Rules
 {{#egress_rules}}
-  egress {
-    from_port   = {{from_port}}
-    to_port     = {{to_port}}
-    protocol    = "{{protocol}}"
-    cidr_blocks = [{{cidr_blocks}}]
-  }
+resource "aws_security_group_rule" "{{name}}_egress_{{@index}}" {
+  type              = "egress"
+  from_port         = {{from_port}}
+  to_port           = {{to_port}}
+  protocol          = "{{protocol}}"
+  description       = "{{description}}"
+  security_group_id = aws_security_group.{{name}}.id
+
+  {{#cidr_blocks}}
+  cidr_blocks       = [{{cidr_blocks}}]
+  {{/cidr_blocks}}
+  {{#destination_security_group_id}}
+  security_groups   = [{{destination_security_group_id}}]
+  {{/destination_security_group_id}}
+}
 {{/egress_rules}}
 
-  tags = {
-    Name = "{{name}}"
-    ManagedBy = "CloudArchitectAI"
-  }
+# Security Group Rule with source security group
+resource "aws_security_group_rule" "{{name}}_rule" {
+  type                     = "{{rule_type}}"
+  from_port                = {{from_port}}
+  to_port                  = {{to_port}}
+  protocol                 = "{{protocol}}"
+  source_security_group_id = "{{source_sg_id}}"
+  security_group_id        = aws_security_group.{{name}}.id
+  description              = "{{description}}"
 }`,
     examples: [
-      `resource "aws_security_group" "{{name}}" {
-  name        = "{{name}}"
-  description = "{{description}}"
-  vpc_id      = "{{vpc_id}}"
+      `resource "aws_security_group" "web_sg" {
+  name_prefix = "\${var.environment}-\${var.application_name}-web-"
+  description = "Security group for web servers"
+  vpc_id      = aws_vpc.main.id
 
-  ingress {
-    from_port   = {{from_port}}
-    to_port     = {{to_port}}
-    protocol    = "{{protocol}}"
-    cidr_blocks = [{{cidr_blocks}}]
-  }
-
-  egress {
-    from_port   = {{from_port}}
-    to_port     = {{to_port}}
-    protocol    = "{{protocol}}"
-    cidr_blocks = [{{cidr_blocks}}]
-  }
+  revoke_rules_on_delete = true
 
   tags = {
-    Name        = "{{name}}"
-    Environment = "production"
+    Name        = "web-sg"
+    Environment = var.environment
     ManagedBy   = "CloudArchitectAI"
+    Terraform   = "true"
+    Application = var.application_name
   }
+}
+
+resource "aws_security_group_rule" "web_ingress_http" {
+  type                     = "ingress"
+  from_port                = 80
+  to_port                  = 80
+  protocol                 = "tcp"
+  description              = "HTTP from anywhere"
+  security_group_id        = aws_security_group.web_sg.id
+  cidr_blocks              = ["0.0.0.0/0"]
+}
+
+resource "aws_security_group_rule" "web_ingress_https" {
+  type                     = "ingress"
+  from_port                = 443
+  to_port                  = 443
+  protocol                 = "tcp"
+  description              = "HTTPS from anywhere"
+  security_group_id        = aws_security_group.web_sg.id
+  cidr_blocks              = ["0.0.0.0/0"]
+}
+
+resource "aws_security_group_rule" "web_egress_all" {
+  type              = "egress"
+  from_port         = 0
+  to_port           = 0
+  protocol          = "-1"
+  description       = "All outbound traffic"
+  security_group_id = aws_security_group.web_sg.id
+  cidr_blocks       = ["0.0.0.0/0"]
 }`
     ],
     bestPractices: [
-      'Follow principle of least privilege',
-      'Use specific ports instead of wide-open rules',
+      'Use security group rules instead of inline rules for complex setups',
+      'Revoke rules on delete to prevent orphaned rules',
+      'Use source security groups instead of IP ranges when possible',
+      'Implement zero trust networking principles',
+      'Use descriptive names and descriptions',
       'Tag security groups appropriately',
-      'Regularly review security group rules'
+      'Regularly audit security group rules',
+      'Use security hub for automated compliance checks',
+      'Implement least privilege access',
+      'Use security groups for internal communication'
     ],
     requiredFields: ['name', 'vpc_id'],
-    optionalFields: ['description', 'ingress', 'egress', 'tags']
+    optionalFields: ['description', 'ingress', 'egress', 'tags', 'revoke_rules_on_delete']
   },
   'aws_db_instance': {
-    terraformTemplate: `resource "aws_db_instance" "{{name}}" {
-  identifier                = "{{identifier}}"
-  allocated_storage         = {{allocated_storage}}
-  max_allocated_storage     = {{max_allocated_storage}}
-  storage_type              = "{{storage_type}}"
-  engine                    = "{{engine}}"
-  engine_version            = "{{engine_version}}"
-  instance_class            = "{{instance_class}}"
-  db_name                   = "{{db_name}}"
-  username                  = "{{username}}"
-  password                  = "{{password}}"
-  skip_final_snapshot       = {{skip_final_snapshot}}
-{{#vpc_security_group_ids}}
-  vpc_security_group_ids = [{{vpc_security_group_ids}}]
-{{/vpc_security_group_ids}}
+    terraformTemplate: `# RDS Instance
+resource "aws_db_instance" "{{name}}" {
+  identifier_prefix          = "\${var.environment}-\${var.application_name}-{{name}}-"
+  allocated_storage          = {{allocated_storage}}
+  max_allocated_storage      = {{max_allocated_storage}}
+  storage_type               = "{{storage_type}}"
+  engine                     = "{{engine}}"
+  engine_version             = "{{engine_version}}"
+  instance_class             = "{{instance_class}}"
+  db_name                    = "{{db_name}}"
+  username                   = "{{username}}"
+  password                   = var.db_password
+  backup_retention_period    = {{backup_retention_period}}
+  backup_window              = "{{backup_window}}"
+  maintenance_window         = "{{maintenance_window}}"
+  skip_final_snapshot        = {{skip_final_snapshot}}
+  deletion_protection        = {{deletion_protection}}
+  multi_az                   = {{multi_az}}
+  storage_encrypted          = true
+  copy_tags_to_snapshot      = true
+  publicly_accessible        = false
+  vpc_security_group_ids     = [aws_security_group.{{name}}_sg.id]
+  db_subnet_group_name       = aws_db_subnet_group.{{name}}.name
+  parameter_group_name       = aws_db_parameter_group.{{name}}.name
 
-  tags = {
-    Name = "{{name}}"
-    ManagedBy = "CloudArchitectAI"
-  }
-}`,
-    examples: [
-      `resource "aws_db_instance" "{{name}}" {
-  identifier                = "{{identifier}}"
-  allocated_storage         = {{allocated_storage}}
-  max_allocated_storage     = {{max_allocated_storage}}
-  storage_type              = "{{storage_type}}"
-  engine                    = "{{engine}}"
-  engine_version            = "{{engine_version}}"
-  instance_class            = "{{instance_class}}"
-  db_name                   = "{{db_name}}"
-  username                  = "{{username}}"
-  password                  = "{{password}}"
-  skip_final_snapshot       = {{skip_final_snapshot}}
-  vpc_security_group_ids    = [aws_security_group.db.id]
+  performance_insights_enabled = {{performance_insights_enabled}}
+  performance_insights_retention_period = {{performance_insights_retention_period}}
+
+  {{#enabled_cloudwatch_logs_exports}}
+  enabled_cloudwatch_logs_exports = [{{enabled_cloudwatch_logs_exports}}]
+  {{/enabled_cloudwatch_logs_exports}}
 
   tags = {
     Name        = "{{name}}"
-    Environment = "production"
+    Environment = var.environment
     ManagedBy   = "CloudArchitectAI"
+    Terraform   = "true"
+    Application = var.application_name
+  }
+}
+
+# DB Subnet Group
+resource "aws_db_subnet_group" "{{name}}" {
+  name       = "\${var.environment}-\${var.application_name}-{{name}}-subnet-group"
+  subnet_ids = [aws_subnet.private_1.id, aws_subnet.private_2.id]
+  description = "Subnet group for \${var.environment} \${var.application_name} {{name}} database"
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-{{name}}-subnet-group"
+    Environment = var.environment
+    Terraform   = "true"
+  }
+}
+
+# DB Parameter Group
+resource "aws_db_parameter_group" "{{name}}" {
+  name   = "\${var.environment}-\${var.application_name}-{{name}}-parameter-group"
+  family = "{{parameter_group_family}}"
+  description = "Parameter group for \${var.environment} \${var.application_name} {{name}} database"
+
+  {{#parameters}}
+  parameter {
+    name  = "{{name}}"
+    value = "{{value}}"
+    apply_method = "{{apply_method}}"
+  }
+  {{/parameters}}
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-{{name}}-parameter-group"
+    Environment = var.environment
+    Terraform   = "true"
+  }
+}
+
+# DB Option Group
+resource "aws_db_option_group" "{{name}}_option_group" {
+  name                    = "\${var.environment}-\${var.application_name}-{{name}}-option-group"
+  option_group_description = "Option group for \${var.environment} \${var.application_name} {{name}} database"
+  engine_name             = "{{engine}}"
+  major_engine_version    = "{{major_engine_version}}"
+
+  {{#options}}
+  option {
+    option_name = "{{option_name}}"
+
+    {{#option_settings}}
+    option_settings {
+      name  = "{{name}}"
+      value = "{{value}}"
+    }
+    {{/option_settings}}
+  }
+  {{/options}}
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-{{name}}-option-group"
+    Environment = var.environment
+    Terraform   = "true"
+  }
+}
+
+# CloudWatch Log Group for RDS logs
+resource "aws_cloudwatch_log_group" "{{name}}_logs" {
+  name              = "/aws/rds/cluster/\${var.environment}/\${var.application_name}/{{name}}"
+  retention_in_days = 30
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-{{name}}-logs"
+    Environment = var.environment
+    Terraform   = "true"
+  }
+}
+
+# KMS Key for RDS encryption
+resource "aws_kms_key" "{{name}}_kms" {
+  description             = "KMS key for \${var.environment} \${var.application_name} {{name}} database encryption"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-{{name}}-kms-key"
+    Environment = var.environment
+    Terraform   = "true"
+  }
+}
+
+# KMS Alias
+resource "aws_kms_alias" "{{name}}_kms_alias" {
+  name          = "alias/\${var.environment}/\${var.application_name}/rds-key"
+  target_key_id = aws_kms_key.{{name}}_kms.id
+}
+
+# RDS Event Subscription (for monitoring)
+resource "aws_db_event_subscription" "{{name}}_event_subscription" {
+  name          = "\${var.environment}-\${var.application_name}-{{name}}-events"
+  sns_topic     = aws_sns_topic.rds_notifications.arn
+  source_type   = "db-instance"
+  source_ids    = [aws_db_instance.{{name}}.id]
+
+  event_categories = [
+    "availability",
+    "configuration change",
+    "deletion",
+    "failover",
+    "low storage",
+    "maintenance",
+    "notification",
+    "recovery"
+  ]
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-{{name}}-event-subscription"
+    Environment = var.environment
+    Terraform   = "true"
+  }
+}
+
+# SNS Topic for RDS notifications
+resource "aws_sns_topic" "rds_notifications" {
+  name = "\${var.environment}-\${var.application_name}-rds-notifications"
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-rds-notifications"
+    Environment = var.environment
+    Terraform   = "true"
+  }
+}`,
+    examples: [
+      `resource "aws_db_instance" "main_postgres" {
+  identifier_prefix          = "\${var.environment}-\${var.application_name}-postgres-"
+  allocated_storage          = 100
+  max_allocated_storage      = 1000
+  storage_type               = "gp3"
+  engine                     = "postgres"
+  engine_version             = "15.4"
+  instance_class             = "db.t3.medium"
+  db_name                    = "myapp"
+  username                   = "admin"
+  password                   = var.db_password
+  backup_retention_period    = 7
+  backup_window              = "03:00-04:00"
+  maintenance_window         = "sun:04:00-sun:05:00"
+  skip_final_snapshot        = false
+  deletion_protection        = true
+  multi_az                   = true
+  storage_encrypted          = true
+  copy_tags_to_snapshot      = true
+  publicly_accessible        = false
+  vpc_security_group_ids     = [aws_security_group.db_sg.id]
+  db_subnet_group_name       = aws_db_subnet_group.main.name
+  parameter_group_name       = aws_db_parameter_group.postgres.name
+
+  performance_insights_enabled = true
+  performance_insights_retention_period = 7
+
+  enabled_cloudwatch_logs_exports = ["postgresql", "upgrade"]
+
+  tags = {
+    Name        = "main-postgres"
+    Environment = var.environment
+    ManagedBy   = "CloudArchitectAI"
+    Terraform   = "true"
+    Application = var.application_name
+  }
+}
+
+resource "aws_db_subnet_group" "main" {
+  name       = "\${var.environment}-\${var.application_name}-main-subnet-group"
+  subnet_ids = [aws_subnet.private_1.id, aws_subnet.private_2.id]
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-main-subnet-group"
+    Environment = var.environment
   }
 }`
     ],
     bestPractices: [
-      'Use parameter groups for database configuration',
-      'Enable backup and maintenance windows',
-      'Use IAM database authentication when possible',
-      'Store passwords in secrets manager',
-      'Monitor storage capacity'
+      'Enable multi-AZ for high availability',
+      'Use encrypted storage',
+      'Enable performance insights',
+      'Implement proper backup strategies',
+      'Use parameter groups for configuration',
+      'Enable deletion protection',
+      'Use option groups for advanced features',
+      'Export logs to CloudWatch',
+      'Use RDS Proxy for connection management',
+      'Implement read replicas for scaling',
+      'Use Aurora for better performance and availability',
+      'Set up monitoring and alerting for database metrics'
     ],
     requiredFields: ['identifier', 'engine', 'instance_class', 'username', 'password'],
-    optionalFields: ['allocated_storage', 'backup_retention_period', 'backup_window', 'maintenance_window', 'vpc_security_group_ids']
+    optionalFields: ['allocated_storage', 'backup_retention_period', 'backup_window', 'maintenance_window', 'vpc_security_group_ids', 'deletion_protection', 'multi_az', 'parameter_group_name']
+  },
+  'aws_lambda_function': {
+    terraformTemplate: `# Lambda Function
+resource "aws_lambda_function" "{{name}}" {
+  filename         = "{{filename}}"
+  function_name    = "\${var.environment}-\${var.application_name}-{{name}}"
+  role             = aws_iam_role.lambda_exec.arn
+  handler          = "{{handler}}"
+  runtime          = "{{runtime}}"
+  timeout          = {{timeout}}
+  memory_size      = {{memory_size}}
+
+  source_code_hash = data.archive_file.lambda_zip.output_base64
+
+  environment {
+    variables = {
+      ENVIRONMENT    = var.environment
+      APPLICATION    = var.application_name
+      LOG_LEVEL      = "INFO"
+      {{#additional_environment_variables}}
+      {{key}}        = "{{value}}"
+      {{/additional_environment_variables}}
+    }
+  }
+
+  # VPC Configuration for accessing private resources
+  vpc_config {
+    subnet_ids         = [aws_subnet.private_1.id, aws_subnet.private_2.id]
+    security_group_ids = [aws_security_group.{{name}}_lambda_sg.id]
+  }
+
+  tracing_config {
+    mode = "{{tracing_mode}}"
+  }
+
+  reserved_concurrent_executions = {{reserved_concurrent_executions}}
+
+  {{#layers}}
+  layers = [
+    {{#each layers}}
+    "{{this}}",
+    {{/each}}
+  ]
+  {{/layers}}
+
+  tags = {
+    Name        = "{{name}}"
+    Environment = var.environment
+    ManagedBy   = "CloudArchitectAI"
+    Terraform   = "true"
+    Application = var.application_name
+  }
+}
+
+# Lambda execution role
+resource "aws_iam_role" "lambda_exec" {
+  name = "\${var.environment}-\${var.application_name}-lambda-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-lambda-role"
+    Environment = var.environment
+    Terraform   = "true"
+  }
+}
+
+# Required IAM policy for VPC access
+resource "aws_iam_role_policy_attachment" "lambda_vpc_access" {
+  role       = aws_iam_role.lambda_exec.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+}
+# Additional policy for accessing private EC2 instance
+resource "aws_iam_role_policy" "lambda_ec2_access" {
+  name = "\${var.environment}-\${var.application_name}-lambda-ec2-access"
+  role = aws_iam_role.lambda_exec.name
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:CreateNetworkInterface",
+          "ec2:DescribeNetworkInterfaces",
+          "ec2:DeleteNetworkInterface",
+          "ec2:AssignPrivateIpAddresses",
+          "ec2:UnassignPrivateIpAddresses"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# Lambda source code archive
+data "archive_file" "lambda_zip" {
+  type        = "zip"
+  source_file = "\${path.module}/lambda/\${var.application_name}/{{name}}/main.py"
+  output_path = "\${path.module}/lambda/\${var.application_name}/{{name}}/function.zip"
+}
+
+# CloudWatch Log Group for Lambda
+resource "aws_cloudwatch_log_group" "{{name}}_logs" {
+  name              = "/aws/lambda/\${var.environment}-\${var.application_name}-{{name}}"
+  retention_in_days = 30
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-{{name}}-logs"
+    Environment = var.environment
+    Terraform   = "true"
+  }
+}
+
+# Security Group for Lambda to access private EC2 instance
+resource "aws_security_group" "{{name}}_lambda_sg" {
+  name_prefix = "\${var.environment}-\${var.application_name}-{{name}}-lambda-"
+  description = "Security group for Lambda function {{name}} to access private resources"
+  vpc_id      = var.vpc_id  # This should be passed as a variable
+
+  # Outbound traffic to private EC2 instance on port 8080
+  egress {
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr_block]  # Reference to VPC CIDR variable
+    description = "Allow outbound to private EC2 instance on port 8080"
+  }
+
+  # Outbound traffic to internet (for general access)
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow outbound to internet"
+  }
+
+  tags = {
+    Name        = "{{name}}-lambda-sg"
+    Environment = var.environment
+    ManagedBy   = "CloudArchitectAI"
+    Terraform   = "true"
+    Application = var.application_name
+  }
+}
+
+# Lambda Event Source Mapping (if needed)
+{{#event_source_mapping}}
+resource "aws_lambda_event_source_mapping" "{{name}}_event_source" {
+  event_source_arn = "{{event_source_arn}}"
+  function_name    = aws_lambda_function.{{name}}.arn
+  batch_size       = {{batch_size}}
+  enabled          = {{enabled}}
+}
+{{/event_source_mapping}}
+
+# Lambda Alias (for versioning)
+resource "aws_lambda_alias" "{{name}}_alias" {
+  name             = "current"
+  description      = "Current version of \${var.environment}-\${var.application_name}-{{name}}"
+  function_name    = aws_lambda_function.{{name}}.arn
+  function_version = aws_lambda_function.{{name}}.version
+}
+
+# Lambda Provisioned Concurrency (for performance)
+resource "aws_lambda_provisioned_concurrency_config" "{{name}}_provisioned_concurrency" {
+  function_name                    = aws_lambda_function.{{name}}.function_name
+  qualifier                       = aws_lambda_alias.{{name}}_alias.name
+  provisioned_concurrent_executions = 2
+}
+
+# Lambda URL Configuration (if needed)
+resource "aws_lambda_function_url" "{{name}}_url" {
+  function_name      = aws_lambda_function.{{name}}.function_name
+  authorization_type = "{{url_auth_type}}"
+
+  cors {
+    allow_credentials = {{url_cors_allow_credentials}}
+    allow_origins     = var.allowed_origins
+    allow_methods     = ["*"]
+    allow_headers     = ["*"]
+    max_age           = 86400
+  }
+}`,
+    examples: [
+      `resource "aws_lambda_function" "api_handler" {
+  filename         = "api_handler.zip"
+  function_name    = "\${var.environment}-\${var.application_name}-api-handler"
+  role             = aws_iam_role.lambda_exec.arn
+  handler          = "main.lambda_handler"
+  runtime          = "python3.9"
+  timeout          = 30
+  memory_size      = 256
+
+  source_code_hash = filebase64sha256("api_handler.zip")
+
+  environment {
+    variables = {
+      ENVIRONMENT = var.environment
+      LOG_LEVEL   = "INFO"
+      DB_HOST     = aws_db_instance.main.endpoint
+    }
+  }
+
+  # VPC Configuration for accessing private resources
+  vpc_config {
+    subnet_ids         = [aws_subnet.private_1.id, aws_subnet.private_2.id]
+    security_group_ids = [aws_security_group.lambda_api_sg.id]
+  }
+
+  tracing_config {
+    mode = "Active"
+  }
+
+  reserved_concurrent_executions = 10
+
+  tags = {
+    Name        = "api-handler"
+    Environment = var.environment
+    ManagedBy   = "CloudArchitectAI"
+    Terraform   = "true"
+    Application = var.application_name
+  }
+}
+
+# Lambda execution role with VPC access
+resource "aws_iam_role" "lambda_exec" {
+  name = "\${var.environment}-\${var.application_name}-lambda-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+# Required IAM policy for VPC access
+resource "aws_iam_role_policy_attachment" "lambda_vpc_access" {
+  role       = aws_iam_role.lambda_exec.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+}
+
+# Security Group for Lambda to access private EC2 instance
+resource "aws_security_group" "lambda_api_sg" {
+  name_prefix = "\${var.environment}-\${var.application_name}-lambda-api-"
+  description = "Security group for Lambda function to access private EC2 instance"
+  vpc_id      = aws_vpc.main.id
+
+  # Outbound traffic to private EC2 instance on port 8080
+  egress {
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr_block]  # Reference to VPC CIDR variable
+    description = "Allow outbound to private EC2 instance on port 8080"
+  }
+
+  # Outbound traffic to internet (for general access)
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow outbound to internet"
+  }
+
+  tags = {
+    Name        = "lambda-api-sg"
+    Environment = var.environment
+    ManagedBy   = "CloudArchitectAI"
+    Terraform   = "true"
+    Application = var.application_name
+  }
+}`
+    ],
+    bestPractices: [
+      'Use VPC configuration for private resources',
+      'Implement proper IAM roles and policies',
+      'Use environment variables for configuration',
+      'Enable active tracing with X-Ray',
+      'Set appropriate timeout and memory limits',
+      'Use reserved concurrency for critical functions',
+      'Use Lambda layers for shared code',
+      'Enable proper logging and monitoring',
+      'Use dead letter queues for error handling',
+      'Implement proper versioning and aliases',
+      'Use provisioned concurrency for predictable performance',
+      'Use Lambda URLs for simple API endpoints'
+    ],
+    requiredFields: ['filename', 'function_name', 'role', 'handler', 'runtime'],
+    optionalFields: ['timeout', 'memory_size', 'environment', 'vpc_config', 'tracing_config', 'reserved_concurrent_executions', 'layers']
+  },
+  'aws_iam_role': {
+    terraformTemplate: `# IAM Role
+resource "aws_iam_role" "{{name}}" {
+  name = "\${var.environment}-\${var.application_name}-{{name}}-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "{{assume_role_action}}"
+        Effect = "Allow"
+        Principal = {
+          {{#service_principal}}
+          Service = "{{service_principal}}"
+          {{/service_principal}}
+          {{#account_principal}}
+          AWS   = "arn:aws:iam::{{account_principal}}:root"
+          {{/account_principal}}
+          {{#federated_principal}}
+          Federated = "{{federated_principal}}"
+          {{/federated_principal}}
+        }
+      }
+    ]
+  })
+
+  managed_policy_arns = [
+    {{#managed_policies}}
+    "{{this}}",
+    {{/managed_policies}}
+  ]
+
+  tags = {
+    Name        = "{{name}}"
+    Environment = var.environment
+    ManagedBy   = "CloudArchitectAI"
+    Terraform   = "true"
+    Application = var.application_name
+  }
+}
+
+# Inline policy for the role (if needed)
+{{#inline_policies}}
+resource "aws_iam_role_policy" "{{name}}_{{@index}}" {
+  name = "\${var.environment}-\${var.application_name}-{{name}}-policy-{{@index}}"
+  role = aws_iam_role.{{name}}.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          {{#actions}}
+          "{{this}}",
+          {{/actions}}
+        ]
+        Resource = [
+          {{#resources}}
+          "{{this}}",
+          {{/resources}}
+        ]
+      }
+    ]
+  })
+}
+{{/inline_policies}}
+
+# Instance Profile (if needed for EC2)
+{{#create_instance_profile}}
+resource "aws_iam_instance_profile" "{{name}}_instance_profile" {
+  name = "\${var.environment}-\${var.application_name}-{{name}}-profile"
+  role = aws_iam_role.{{name}}.name
+}
+{{/create_instance_profile}}
+
+# Role Policy Attachment
+{{#policy_attachments}}
+resource "aws_iam_role_policy_attachment" "{{name}}_policy_{{@index}}" {
+  role       = aws_iam_role.{{name}}.name
+  policy_arn = "{{this}}"
+}
+{{/policy_attachments}}
+
+# Role Boundary (for permission boundaries)
+{{#role_boundary}}
+resource "aws_iam_role_policy_attachment" "{{name}}_boundary" {
+  role       = aws_iam_role.{{name}}.name
+  policy_arn = "{{role_boundary}}"
+}
+{{/role_boundary}}
+
+# OIDC Provider for EKS/Federation (if needed)
+{{#oidc_provider}}
+resource "aws_iam_openid_connect_provider" "{{name}}_oidc" {
+  url = "{{oidc_url}}"
+
+  client_id_list = [
+    "{{oidc_client_id}}"
+  ]
+
+  thumbprint_list = [
+    "{{oidc_thumbprint}}"
+  ]
+}
+{{/oidc_provider}}
+
+# CloudWatch Log Group for role activity (if needed)
+resource "aws_cloudwatch_log_group" "{{name}}_activity_logs" {
+  name              = "/aws/iam/\${var.environment}/\${var.application_name}/{{name}}-activity"
+  retention_in_days = 30
+
+  tags = {
+    Name        = "\${var.environment}-\${var.application_name}-{{name}}-activity-logs"
+    Environment = var.environment
+    Terraform   = "true"
+  }
+}`,
+    examples: [
+      `resource "aws_iam_role" "api_lambda_role" {
+  name = "\${var.environment}-\${var.application_name}-api-lambda-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  managed_policy_arns = [
+    "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+    "arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy"
+  ]
+
+  tags = {
+    Name        = "api-lambda-role"
+    Environment = var.environment
+    ManagedBy   = "CloudArchitectAI"
+    Terraform   = "true"
+    Application = var.application_name
+  }
+}
+
+resource "aws_iam_role_policy" "api_lambda_policy" {
+  name = "\${var.environment}-\${var.application_name}-api-lambda-policy"
+  role = aws_iam_role.api_lambda_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:UpdateItem",
+          "dynamodb:DeleteItem"
+        ]
+        Resource = aws_dynamodb_table.main.arn
+      }
+    ]
+  })
+}`
+    ],
+    bestPractices: [
+      'Use managed policies when possible',
+      'Implement least-privilege access',
+      'Use inline policies for specific custom permissions',
+      'Tag IAM resources properly',
+      'Use service-linked roles when available',
+      'Enable IAM access analyzer for security monitoring',
+      'Use IAM roles instead of long-term access keys',
+      'Implement proper role boundaries and trust policies',
+      'Use permission boundaries for organizational controls',
+      'Enable CloudTrail logging for IAM activity'
+    ],
+    requiredFields: ['name', 'assume_role_policy'],
+    optionalFields: ['managed_policy_arns', 'inline_policies', 'tags', 'path', 'description']
   }
 };
 
@@ -319,13 +1698,69 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.0"
+      version = "~> 5.40"
     }
   }
 }
 
 provider "aws" {
-  region = "us-east-1"
+  region = var.aws_region
+  default_tags {
+    tags = {
+      Environment = var.environment
+      Application = var.application_name
+      ManagedBy   = "CloudArchitectAI"
+      Terraform   = "true"
+    }
+  }
+}
+
+# Variables
+variable "environment" {
+  description = "Environment name (dev/staging/prod)"
+  type        = string
+  default     = "dev"
+}
+
+variable "application_name" {
+  description = "Application name"
+  type        = string
+  default     = "myapp"
+}
+
+variable "aws_region" {
+  description = "AWS region"
+  type        = string
+  default     = "us-east-1"
+}
+
+variable "public_key" {
+  description = "Public key for SSH access"
+  type        = string
+}
+
+variable "db_password" {
+  description = "Database password"
+  type        = string
+  sensitive   = true
+}
+
+variable "allowed_origins" {
+  description = "Allowed origins for CORS"
+  type        = list(string)
+  default     = ["*"]
+}
+
+variable "vpc_id" {
+  description = "VPC ID for Lambda function"
+  type        = string
+  # default     = ""  # This should be provided when deploying
+}
+
+variable "vpc_cidr_block" {
+  description = "VPC CIDR block for Lambda security group"
+  type        = string
+  # default     = "10.0.0.0/16"  # This should be provided when deploying
 }
 
 # Your infrastructure code will appear here...
@@ -335,18 +1770,78 @@ provider "aws" {
   let terraformCode = `# Generated by Cloud Architect AI
 # Cloud Architect - Terraform Configuration
 # Generated using RAG (Retrieval Augmented Generation)
+# Modern Infrastructure as Code Practices (2026)
 
 terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.0"
+      version = "~> 5.40"
+    }
+  }
+  
+  required_version = ">= 1.8"
+}
+
+provider "aws" {
+  region = var.aws_region
+  
+  default_tags {
+    tags = {
+      Environment = var.environment
+      Application = var.application_name
+      ManagedBy   = "CloudArchitectAI"
+      Terraform   = "true"
     }
   }
 }
 
-provider "aws" {
-  region = "us-east-1"
+# Variables
+variable "environment" {
+  description = "Environment name (dev/staging/prod)"
+  type        = string
+  default     = "dev"
+}
+
+variable "application_name" {
+  description = "Application name"
+  type        = string
+  default     = "myapp"
+}
+
+variable "aws_region" {
+  description = "AWS region"
+  type        = string
+  default     = "us-east-1"
+}
+
+variable "public_key" {
+  description = "Public key for SSH access"
+  type        = string
+}
+
+variable "db_password" {
+  description = "Database password"
+  type        = string
+  sensitive   = true
+}
+
+variable "allowed_origins" {
+  description = "Allowed origins for CORS"
+  type        = list(string)
+  default     = ["*"]
+}
+
+variable "vpc_id" {
+  description = "VPC ID for Lambda function"
+  type        = string
+  # default     = ""  # This should be provided when deploying
+}
+
+variable "vpc_cidr_block" {
+  description = "VPC CIDR block for Lambda security group"
+  type        = string
+  # default     = "10.0.0.0/16"  # This should be provided when deploying
 }
 
 `;
@@ -368,8 +1863,14 @@ provider "aws" {
       const templateData = {
         name: resourceName,
         cidr_block: config.cidr_block || '10.0.0.0/16',
+        secondary_cidr_block: config.secondary_cidr_block || '10.1.0.0/16',
         enable_dns_hostnames: config.enable_dns_hostnames ?? true,
         enable_dns_support: config.enable_dns_support ?? true,
+        assign_ipv6_cidr_block: config.assign_ipv6_cidr_block ?? false,
+        public_cidr_block_1: config.public_cidr_block_1 || '10.0.1.0/24',
+        public_cidr_block_2: config.public_cidr_block_2 || '10.0.2.0/24',
+        private_cidr_block_1: config.private_cidr_block_1 || '10.0.3.0/24',
+        private_cidr_block_2: config.private_cidr_block_2 || '10.0.4.0/24',
       };
       
       const resourceCode = renderTemplate(knowledgeBase[matchedType].terraformTemplate, templateData);
@@ -432,6 +1933,96 @@ provider "aws" {
             case 'db_name':
               templateData[field] = 'mydb';
               break;
+            case 'versioning_status':
+              templateData[field] = 'Enabled';
+              break;
+            case 'filename':
+              templateData[field] = 'lambda_function.zip';
+              break;
+            case 'function_name':
+              templateData[field] = resourceName;
+              break;
+            case 'handler':
+              templateData[field] = 'index.handler';
+              break;
+            case 'runtime':
+              templateData[field] = 'python3.9';
+              break;
+            case 'timeout':
+              templateData[field] = 30;
+              break;
+            case 'memory_size':
+              templateData[field] = 128;
+              break;
+            case 'assume_role_action':
+              templateData[field] = 'sts:AssumeRole';
+              break;
+            case 'assume_role_service':
+              templateData[field] = 'ec2.amazonaws.com';
+              break;
+            case 'default_managed_policy':
+              templateData[field] = 'arn:aws:iam::aws:policy/PowerUserAccess';
+              break;
+            case 'allowed_actions':
+              templateData[field] = 's3:GetObject';
+              break;
+            case 'allowed_resources':
+              templateData[field] = '*';
+              break;
+            case 'backup_retention_period':
+              templateData[field] = 7;
+              break;
+            case 'backup_window':
+              templateData[field] = '03:00-04:00';
+              break;
+            case 'maintenance_window':
+              templateData[field] = 'sun:04:00-sun:05:00';
+              break;
+            case 'skip_final_snapshot':
+              templateData[field] = false;
+              break;
+            case 'deletion_protection':
+              templateData[field] = true;
+              break;
+            case 'multi_az':
+              templateData[field] = false;
+              break;
+            case 'performance_insights_enabled':
+              templateData[field] = true;
+              break;
+            case 'performance_insights_retention_period':
+              templateData[field] = 7;
+              break;
+            case 'tracing_mode':
+              templateData[field] = 'PassThrough';
+              break;
+            case 'reserved_concurrent_executions':
+              templateData[field] = 100;
+              break;
+            case 'ami_type':
+              templateData[field] = 'amazon_linux';
+              break;
+            case 'associate_public_ip':
+              templateData[field] = false;
+              break;
+            case 'root_volume_size':
+              templateData[field] = 20;
+              break;
+            case 'ebs_volume_size':
+              templateData[field] = 100;
+              break;
+            case 'url_auth_type':
+              templateData[field] = 'AWS_IAM';
+              break;
+            case 'url_cors_allow_credentials':
+              templateData[field] = false;
+              break;
+            case 'parameter_group_family':
+              templateData[field] = 'postgres15';
+              break;
+            case 'major_engine_version':
+              templateData[field] = '15';
+              break;
             default:
               templateData[field] = '';
           }
@@ -448,6 +2039,8 @@ provider "aws" {
             templateData.subnet_id = `aws_subnet.${parentResourceName}_subnet.id`;
           } else if (matchedType === 'aws_db_instance') {
             templateData.vpc_security_group_ids = `aws_security_group.${parentResourceName}_sg.id`;
+          } else if (matchedType === 'aws_lambda_function') {
+            templateData.vpc_id = 'var.vpc_id'; // Reference to the VPC ID variable
           }
         }
       }
@@ -464,6 +2057,60 @@ provider "aws" {
 `;
     }
   }
+
+  // Add outputs at the end
+  terraformCode += `# Outputs
+{{#vpcNodes}}
+output "vpc_id" {
+  description = "ID of the VPC"
+  value       = aws_vpc.main.id
+}
+
+output "vpc_cidr_block" {
+  description = "CIDR block of the VPC"
+  value       = aws_vpc.main.cidr_block
+}
+
+output "public_subnet_ids" {
+  description = "IDs of the public subnets"
+  value       = [aws_subnet.main_public_1.id, aws_subnet.main_public_2.id]
+}
+
+output "private_subnet_ids" {
+  description = "IDs of the private subnets"
+  value       = [aws_subnet.main_private_1.id, aws_subnet.main_private_2.id]
+}
+{{/vpcNodes}}
+
+{{#otherNodes}}
+output "instance_ids" {
+  description = "IDs of the EC2 instances"
+  value       = [for instance in aws_instance.main : instance.id]
+}
+
+output "db_endpoint" {
+  description = "Connection endpoint for the database"
+  value       = aws_db_instance.main.endpoint
+  sensitive   = true
+}
+
+output "s3_bucket_name" {
+  description = "Name of the S3 bucket"
+  value       = aws_s3_bucket.main.bucket
+}
+
+output "lambda_function_arns" {
+  description = "ARNs of the Lambda functions"
+  value       = [for lambda in aws_lambda_function.main : lambda.arn]
+}
+
+output "iam_role_arns" {
+  description = "ARNs of the IAM roles"
+  value       = [for role in aws_iam_role.main : role.arn]
+}
+{{/otherNodes}}
+
+`;
 
   return terraformCode;
 };
