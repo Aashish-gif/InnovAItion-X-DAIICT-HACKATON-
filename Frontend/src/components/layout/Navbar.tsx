@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Cloud, Menu, X, User, Settings, PieChart } from 'lucide-react';
+import { Cloud, Menu, X, User, Settings, PieChart, Lightbulb } from 'lucide-react';
 import { GradientButton } from '@/components/ui/GradientButton';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -45,6 +45,16 @@ const Navbar: React.FC = () => {
               <button className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
                 <PieChart className="w-4 h-4" />
                 Budget Analysis
+              </button>
+            </Link>
+          </div>
+
+          {/* New Section: Service Advisor */}
+          <div className="hidden md:flex items-center ml-4">
+            <Link to="/service-advisor">
+              <button className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                <Lightbulb className="w-4 h-4" />
+                Service Advisor
               </button>
             </Link>
           </div>
@@ -100,6 +110,14 @@ const Navbar: React.FC = () => {
               <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-glass/50 transition-all">
                 <PieChart className="w-5 h-5" />
                 Budget Analysis
+              </button>
+            </Link>
+
+            {/* Mobile Section: Service Advisor */}
+            <Link to="/service-advisor" onClick={() => setIsOpen(false)}>
+              <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-glass/50 transition-all">
+                <Lightbulb className="w-5 h-5" />
+                Service Advisor
               </button>
             </Link>
 

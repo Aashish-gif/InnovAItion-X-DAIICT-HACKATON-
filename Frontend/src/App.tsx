@@ -9,7 +9,8 @@ import Studio from "./pages/Studio";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import NotFound from "./pages/NotFound";
-  import BudgetAnalysis from "./pages/BudgetAnalysis"; 
+import BudgetAnalysis from "./pages/BudgetAnalysis";
+import ServiceAdvisor from "./pages/ServiceAdvisor";
 
 const queryClient = new QueryClient();
 
@@ -17,7 +18,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
-      <Sonner 
+      <Sonner
         position="bottom-right"
         toastOptions={{
           style: {
@@ -34,10 +35,11 @@ const App = () => (
           <Route path="/signup" element={<Signup />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/studio/:projectId" element={<Studio />} />
-          
+
           {/* Section: Budget Analysis Route */}
-          <Route path="/budget-analysis" element={<BudgetAnalysis />} /> 
-          
+          <Route path="/budget-analysis" element={<BudgetAnalysis />} />
+          <Route path="/service-advisor" element={<ServiceAdvisor />} />
+
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

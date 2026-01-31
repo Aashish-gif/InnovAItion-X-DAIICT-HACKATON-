@@ -235,3 +235,20 @@ export const pricingApi = {
     });
   },
 };
+
+// Recommendation API functions
+export interface ServiceSuggestion {
+  service: string;
+  reason: string;
+  estimatedCost: string;
+  complexity: string;
+}
+
+export const recommendationApi = {
+  getSuggestion: async (data: { workloadType: string; budget: string }): Promise<{ success: boolean; data: ServiceSuggestion }> => {
+    return apiRequest<{ success: boolean; data: ServiceSuggestion }>('/recommendations/suggest', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+};
