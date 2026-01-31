@@ -35,7 +35,7 @@ const Navbar: React.FC = () => {
               </div>
             </motion.div>
             <span className="font-bold text-lg">
-              Cloud<span className="gradient-text">Architect</span>
+              Zenith
             </span>
           </Link>
 

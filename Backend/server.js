@@ -4,6 +4,7 @@ import cors from 'cors';
 import connectDB from './config/db.js';
 import authRoutes from './routes/auth.js';
 import projectRoutes from './routes/projects.js';
+import pricingRoutes from './routes/pricing.js';
 
 // Load environment variables
 dotenv.config();
@@ -39,6 +40,7 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
+app.use('/api/pricing', pricingRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {

@@ -205,3 +205,33 @@ export const projectApi = {
     });
   },
 };
+
+// Pricing API functions
+export interface PricingRecommendation {
+  compute: {
+    name: string;
+    price: number;
+    minBudget: number;
+    maxBudget: number;
+    desc: string;
+  };
+  db: {
+    name: string;
+    price: number;
+    minBudget: number;
+    maxBudget: number;
+    desc: string;
+  };
+  storageCost: string;
+  totalEst: string;
+  utilization: string;
+}
+
+export const pricingApi = {
+  calculateBudget: async (data: { budget: string; storage: string }): Promise<{ success: boolean; data: PricingRecommendation }> => {
+    return apiRequest<{ success: boolean; data: PricingRecommendation }>('/pricing/calculate', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+};
