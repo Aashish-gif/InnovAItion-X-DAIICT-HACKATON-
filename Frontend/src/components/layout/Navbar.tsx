@@ -5,11 +5,19 @@ import { Cloud, Menu, X, User, Settings, PieChart, Lightbulb } from 'lucide-reac
 import { GradientButton } from '@/components/ui/GradientButton';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/useAuthStore';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Navbar: React.FC = () => {
   const [isOpen, setIsOpen] = React.useState(false);
   const location = useLocation();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user, clearAuth } = useAuthStore();
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -66,9 +74,33 @@ const Navbar: React.FC = () => {
                 <button className="p-2 text-muted-foreground hover:text-foreground hover:bg-glass/50 rounded-lg transition-all">
                   <Settings className="w-5 h-5" />
                 </button>
-                <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center">
-                  <User className="w-4 h-4 text-primary-foreground" />
-                </div>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center outline-none cursor-pointer transition-transform active:scale-95">
+                      <User className="w-4 h-4 text-primary-foreground" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56 bg-background/95 backdrop-blur-xl border-white/10">
+                    <DropdownMenuLabel className="font-normal">
+                      <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium leading-none">{user?.username || 'User'}</p>
+                        <p className="text-xs leading-none text-muted-foreground">{user?.email || 'user@example.com'}</p>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator className="bg-white/10" />
+                    <DropdownMenuItem className="cursor-pointer">
+                      Profile
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer">
+                      Settings
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator className="bg-white/10" />
+                    <DropdownMenuItem onClick={() => clearAuth()} className="text-red-500 focus:text-red-500 cursor-pointer focus:bg-red-500/10">
+                      Log out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             ) : (
               <div className="hidden md:flex items-center gap-3">
@@ -123,15 +155,31 @@ const Navbar: React.FC = () => {
 
             {isAuthenticated ? (
               <>
-                <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-glass/50 transition-all">
-                  <Settings className="w-5 h-5" />
-                  Settings
-                </button>
-                <div className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground">
-                  <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center">
-                    <User className="w-4 h-4 text-primary-foreground" />
+                <div className="border-t border-white/10 pt-4 mt-2">
+                  <div className="flex items-center gap-3 px-4 mb-4">
+                    <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center shrink-0">
+                      <User className="w-5 h-5 text-primary-foreground" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium text-foreground">{user?.username || 'User'}</span>
+                      <span className="text-xs text-muted-foreground">{user?.email || 'user@example.com'}</span>
+                    </div>
                   </div>
-                  Profile
+
+                  <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-glass/50 transition-all">
+                    <Settings className="w-5 h-5" />
+                    Settings
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      clearAuth();
+                      setIsOpen(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-red-500 hover:bg-red-500/10 transition-all"
+                  >
+                    Log out
+                  </button>
                 </div>
               </>
             ) : (
