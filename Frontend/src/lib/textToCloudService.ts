@@ -15,11 +15,11 @@ export const convertTextToCloud = async (text: string): Promise<TextToCloudResul
   try {
     // This is a simplified mock implementation
     // In a real scenario, you would call an AI API like OpenAI
-    
+
     // Parse the text to identify infrastructure components
     const textLower = text.toLowerCase();
     const nodes: Node[] = [];
-    
+
     // Define positions for nodes
     const positions = [
       { x: Math.random() * 300 + 100, y: Math.random() * 200 + 100 },
@@ -28,168 +28,120 @@ export const convertTextToCloud = async (text: string): Promise<TextToCloudResul
       { x: Math.random() * 300 + 100, y: Math.random() * 200 + 100 },
       { x: Math.random() * 300 + 100, y: Math.random() * 200 + 100 },
     ];
-    
+
     let positionIndex = 0;
-    
-    // Identify common AWS services in the text
-    if (textLower.includes('web server') || textLower.includes('ec2') || textLower.includes('instance')) {
+
+    // Identify components and build relationships
+    if (textLower.includes('vpc') || textLower.includes('network') || textLower.includes('infrastructure')) {
+      const vpcId = `vpc_${Date.now()}`;
       nodes.push({
-        id: `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // Ensure unique ID
-        type: 'cloudComponent',
-        position: positions[positionIndex++ % positions.length],
-        data: {
-          label: 'Web Server',
-          resourceType: 'Virtual Server',
-          icon: 'Server',
-          terraformType: 'aws_instance',
-          category: 'compute',
-          type: 'ec2',
-          config: {
-            ami: 'ami-0c55b159cbfafe1f0',
-            instance_type: 't3.micro',
-            key_name: '',
-            vpc_security_group_ids: [],
-            subnet_id: '',
-          }
-        },
-      });
-    }
-    
-    if (textLower.includes('s3') || textLower.includes('bucket') || textLower.includes('images')) {
-      nodes.push({
-        id: `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // Ensure unique ID
-        type: 'cloudComponent',
-        position: positions[positionIndex++ % positions.length],
-        data: {
-          label: 'Image Storage',
-          resourceType: 'Object Storage',
-          icon: 'Folder',
-          terraformType: 'aws_s3_bucket',
-          category: 'storage',
-          type: 's3',
-          config: {
-            bucket: 'image-storage-' + Date.now(),
-            acl: 'private',
-            versioning: { enabled: true },
-          }
-        },
-      });
-    }
-    
-    if (textLower.includes('database') || textLower.includes('rds') || textLower.includes('mysql') || textLower.includes('postgres')) {
-      nodes.push({
-        id: `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // Ensure unique ID
-        type: 'cloudComponent',
-        position: positions[positionIndex++ % positions.length],
-        data: {
-          label: 'Database',
-          resourceType: 'Relational Database',
-          icon: 'Database',
-          terraformType: 'aws_db_instance',
-          category: 'database',
-          type: 'rds',
-          config: {
-            engine: 'postgres',
-            engine_version: '15.4',
-            instance_class: 'db.t3.micro',
-            allocated_storage: 20,
-            max_allocated_storage: 100,
-            storage_type: 'gp2',
-            db_name: 'mydb',
-            username: 'admin',
-            password: '',
-            skip_final_snapshot: true,
-          }
-        },
-      });
-    }
-    
-    if (textLower.includes('load balancer') || textLower.includes('elb') || textLower.includes('alb')) {
-      nodes.push({
-        id: `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // Ensure unique ID
-        type: 'cloudComponent',
-        position: positions[positionIndex++ % positions.length],
-        data: {
-          label: 'Load Balancer',
-          resourceType: 'Elastic Load Balancer',
-          icon: 'Scale',
-          terraformType: 'aws_lb',
-          category: 'network',
-          type: 'elb',
-          config: {
-            name: 'web-lb',
-            internal: false,
-            load_balancer_type: 'application',
-          }
-        },
-      });
-    }
-    
-    if (textLower.includes('vpc') || textLower.includes('network') || textLower.includes('secure')) {
-      nodes.push({
-        id: `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // Ensure unique ID
+        id: vpcId,
         type: 'vpcGroup',
-        position: { x: Math.random() * 200 + 50, y: Math.random() * 200 + 50 },
+        position: { x: 50, y: 50 },
         data: {
-          label: 'Secure VPC',
+          label: 'Production VPC',
           resourceType: 'Virtual Private Cloud',
           icon: 'Network',
           terraformType: 'aws_vpc',
           category: 'network',
           type: 'vpc',
-          config: {
-            cidr_block: '10.0.0.0/16',
-            enable_dns_hostnames: true,
-            enable_dns_support: true,
-          }
+          config: { cidr_block: '10.0.0.0/16', enable_dns_hostnames: true }
         },
       });
+
+      if (textLower.includes('public') || textLower.includes('web')) {
+        const subnetId = `subnet_${Date.now()}`;
+        nodes.push({
+          id: subnetId,
+          type: 'cloudComponent',
+          parentNode: vpcId,
+          extent: 'parent',
+          position: { x: 50, y: 100 },
+          data: {
+            label: 'Public Subnet',
+            resourceType: 'VPC Subnet',
+            icon: 'Layers',
+            terraformType: 'aws_subnet',
+            category: 'network',
+            type: 'subnet',
+            config: { cidr_block: '10.0.1.0/24', availability_zone: 'us-east-1a' }
+          },
+        });
+      }
     }
-    
-    if (textLower.includes('security') || textLower.includes('firewall') || textLower.includes('sg')) {
+
+    if (textLower.includes('serverless') || textLower.includes('lambda') || textLower.includes('api')) {
       nodes.push({
-        id: `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // Ensure unique ID
+        id: `lambda_${Date.now()}`,
         type: 'cloudComponent',
         position: positions[positionIndex++ % positions.length],
         data: {
-          label: 'Security Group',
-          resourceType: 'Firewall Rules',
-          icon: 'Shield',
-          terraformType: 'aws_security_group',
-          category: 'security',
-          type: 'sg',
-          config: {
-            name: 'web-sg',
-            description: 'Security group for web server',
-          }
+          label: 'API Function',
+          resourceType: 'Serverless Function',
+          icon: 'Zap',
+          terraformType: 'aws_lambda_function',
+          category: 'compute',
+          type: 'lambda',
+          config: { runtime: 'python3.13', handler: 'index.handler', timeout: 30 }
         },
       });
     }
-    
-    // If no nodes were identified, create a default VPC
+
+    if (textLower.includes('database') || textLower.includes('rds') || textLower.includes('sql')) {
+      nodes.push({
+        id: `db_${Date.now()}`,
+        type: 'cloudComponent',
+        position: positions[positionIndex++ % positions.length],
+        data: {
+          label: 'Primary Database',
+          resourceType: 'Relational Database',
+          icon: 'Database',
+          terraformType: 'aws_db_instance',
+          category: 'database',
+          type: 'rds',
+          config: { engine: 'postgres', instance_class: 'db.t3.micro', allocated_storage: 20 }
+        },
+      });
+    }
+
+    if (textLower.includes('storage') || textLower.includes('s3') || textLower.includes('bucket')) {
+      nodes.push({
+        id: `s3_${Date.now()}`,
+        type: 'cloudComponent',
+        position: positions[positionIndex++ % positions.length],
+        data: {
+          label: 'App Assets',
+          resourceType: 'Object Storage',
+          icon: 'Folder',
+          terraformType: 'aws_s3_bucket',
+          category: 'storage',
+          type: 's3',
+          config: { bucket: 'zenith-ai-assets-' + Date.now(), versioning: { enabled: true } }
+        },
+      });
+    }
+
+    // Default if nothing matched
     if (nodes.length === 0) {
       nodes.push({
-        id: `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // Ensure unique ID
+        id: `ec2_${Date.now()}`,
         type: 'cloudComponent',
-        position: { x: Math.random() * 200 + 100, y: Math.random() * 100 + 50 },
+        position: { x: 250, y: 200 },
         data: {
-          label: 'Default Server',
+          label: 'Default Instance',
           resourceType: 'Virtual Server',
           icon: 'Server',
           terraformType: 'aws_instance',
           category: 'compute',
           type: 'ec2',
-          config: {
-            ami: 'ami-0c55b159cbfafe1f0',
-            instance_type: 't3.micro',
-          }
+          config: { instance_type: 't3.micro' }
         },
       });
     }
-    
+
     // Generate Terraform code from the nodes using RAG
     const terraformCode = await generateTerraformWithRag(nodes, []); // No edges for text-to-cloud conversion
-    
+
     return {
       nodes,
       edges: [],

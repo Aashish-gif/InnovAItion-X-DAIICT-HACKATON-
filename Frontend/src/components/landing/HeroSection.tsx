@@ -9,37 +9,37 @@ const HeroSection: React.FC = () => {
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
       {/* Animated Background */}
       <div className="absolute inset-0 animated-bg" />
-      
+
       {/* Floating Gradient Orbs */}
       <motion.div
-        animate={{ 
+        animate={{
           y: [0, -30, 0],
           scale: [1, 1.1, 1],
         }}
-        transition={{ 
-          duration: 8, 
+        transition={{
+          duration: 8,
           repeat: Infinity,
-          ease: "easeInOut" 
+          ease: "easeInOut"
         }}
         className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl"
       />
       <motion.div
-        animate={{ 
+        animate={{
           y: [0, 30, 0],
           scale: [1, 1.15, 1],
         }}
-        transition={{ 
-          duration: 10, 
+        transition={{
+          duration: 10,
           repeat: Infinity,
           ease: "easeInOut",
           delay: 1
         }}
         className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-accent/10 rounded-full blur-3xl"
       />
-      
+
       {/* Grid Pattern Overlay */}
       <div className="absolute inset-0 grid-pattern opacity-30" />
-      
+
       <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         {/* Badge */}
         <motion.div
@@ -48,12 +48,12 @@ const HeroSection: React.FC = () => {
           transition={{ duration: 0.6 }}
           className="inline-flex items-center gap-2 px-4 py-2 mb-8 rounded-full bg-glass/60 border border-glass-border backdrop-blur-sm"
         >
-          <Sparkles className="w-4 h-4 text-primary" />
+          <img src="/logo.png" alt="Logo" className="w-4 h-4 object-contain" />
           <span className="text-sm text-muted-foreground">
             Visual Infrastructure Design
           </span>
         </motion.div>
-        
+
         {/* Main Heading */}
         <motion.h1
           initial={{ opacity: 0, y: 30 }}
@@ -65,7 +65,7 @@ const HeroSection: React.FC = () => {
           <br />
           <span className="gradient-text">Visually</span>
         </motion.h1>
-        
+
         {/* Subtitle */}
         <motion.p
           initial={{ opacity: 0, y: 30 }}
@@ -73,10 +73,10 @@ const HeroSection: React.FC = () => {
           transition={{ duration: 0.7, delay: 0.2 }}
           className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10"
         >
-          Drag AWS resources to design your architecture. 
+          Drag AWS resources to design your architecture.
           Terraform code writes itself. Ship infrastructure faster.
         </motion.p>
-        
+
         {/* CTA Buttons */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -93,7 +93,7 @@ const HeroSection: React.FC = () => {
             Watch Demo
           </GradientButton>
         </motion.div>
-        
+
         {/* Hero Visual */}
         <motion.div
           initial={{ opacity: 0, y: 60 }}
@@ -103,7 +103,7 @@ const HeroSection: React.FC = () => {
         >
           {/* Glow Effect */}
           <div className="absolute inset-0 bg-gradient-glow opacity-60" />
-          
+
           {/* Mock Editor Preview */}
           <div className="relative glass-panel p-2 mx-auto max-w-4xl">
             <div className="flex items-center gap-2 px-4 py-3 border-b border-glass-border">
@@ -112,9 +112,9 @@ const HeroSection: React.FC = () => {
                 <div className="w-3 h-3 rounded-full bg-warning/80" />
                 <div className="w-3 h-3 rounded-full bg-success/80" />
               </div>
-              <span className="text-xs text-muted-foreground ml-4">cloud-architect-studio</span>
+              <span className="text-xs text-muted-foreground ml-4">zenith-ai-studio</span>
             </div>
-            
+
             <div className="grid grid-cols-12 h-80">
               {/* Sidebar Mock */}
               <div className="col-span-2 border-r border-glass-border p-3">
@@ -130,7 +130,7 @@ const HeroSection: React.FC = () => {
                   ))}
                 </div>
               </div>
-              
+
               {/* Canvas Mock */}
               <div className="col-span-6 relative grid-pattern p-4">
                 <motion.div
@@ -158,7 +158,7 @@ const HeroSection: React.FC = () => {
                   <span className="text-xs text-success">S3</span>
                 </motion.div>
               </div>
-              
+
               {/* Code Mock */}
               <div className="col-span-4 border-l border-glass-border p-3 font-mono text-xs text-left">
                 <motion.div

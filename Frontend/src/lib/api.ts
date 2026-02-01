@@ -242,6 +242,7 @@ export interface ServiceSuggestion {
   reason: string;
   estimatedCost: string;
   complexity: string;
+  tips?: string;
 }
 
 export const recommendationApi = {

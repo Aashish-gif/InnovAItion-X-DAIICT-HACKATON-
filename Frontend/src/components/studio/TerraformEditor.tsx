@@ -9,10 +9,10 @@ import { cn } from '@/lib/utils';
 import { parseHCLtoNodes } from '@/logic/TerraformParser';
 
 const TerraformEditor: React.FC = () => {
-  const { 
-    terraformCode, 
-    isEditing, 
-    syncStatus, 
+  const {
+    terraformCode,
+    isEditing,
+    syncStatus,
     isCodePanelCollapsed,
     setIsEditing,
     toggleCodePanel,
@@ -20,32 +20,43 @@ const TerraformEditor: React.FC = () => {
     setNodes,
     setEdges
   } = useStudioStore();
-  
+
   const [copied, setCopied] = React.useState(false);
-  
+
   const copyToClipboard = async () => {
     await navigator.clipboard.writeText(terraformCode);
     setCopied(true);
     toast.success('Copied to clipboard');
     setTimeout(() => setCopied(false), 2000);
   };
-  
+
   const formatCode = () => {
     toast.success('Code formatted');
   };
-  
-  const syncDiagramFromCode = () => {
+
+  const syncDiagramFromCode = React.useCallback(() => {
     try {
       const { nodes, edges } = parseHCLtoNodes(terraformCode);
       setNodes(nodes);
       setEdges(edges);
-      toast.success(`${nodes.length} nodes and ${edges.length} connections synced from code`);
+      // We don't want to show a toast for every keystroke, 
+      // maybe only for manual sync or major changes.
     } catch (error) {
       console.error('Error parsing HCL code:', error);
-      toast.error('Failed to sync diagram from code');
     }
-  };
-  
+  }, [terraformCode, setNodes, setEdges]);
+
+  // Real-time bi-directional sync (Code -> Diagram)
+  React.useEffect(() => {
+    if (!isEditing) return;
+
+    const timeoutId = setTimeout(() => {
+      syncDiagramFromCode();
+    }, 1000); // 1 second debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [terraformCode, isEditing, syncDiagramFromCode]);
+
   return (
     <motion.aside
       initial={false}
@@ -65,13 +76,13 @@ const TerraformEditor: React.FC = () => {
             <PanelRightClose className="w-4 h-4" />
           )}
         </button>
-        
+
         {!isCodePanelCollapsed && (
           <>
             <div className="flex items-center gap-2">
               <Code className="w-4 h-4 text-primary" />
               <span className="font-semibold text-sm">Terraform</span>
-              <StatusBadge 
+              <StatusBadge
                 variant={syncStatus === 'synced' ? 'success' : syncStatus === 'syncing' ? 'warning' : 'danger'}
                 size="sm"
               >
@@ -79,7 +90,7 @@ const TerraformEditor: React.FC = () => {
                 {syncStatus}
               </StatusBadge>
             </div>
-            
+
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1 px-2 py-1 bg-green-500/10 rounded-md">
                 <DollarSign className="w-3 h-3 text-green-500" />
@@ -90,8 +101,8 @@ const TerraformEditor: React.FC = () => {
                   onClick={() => setIsEditing(!isEditing)}
                   className={cn(
                     'p-2 rounded-lg transition-all',
-                    isEditing 
-                      ? 'bg-primary/20 text-primary' 
+                    isEditing
+                      ? 'bg-primary/20 text-primary'
                       : 'text-muted-foreground hover:text-foreground hover:bg-glass/50'
                   )}
                 >
@@ -121,7 +132,7 @@ const TerraformEditor: React.FC = () => {
           </>
         )}
       </div>
-      
+
       {/* Editor */}
       <AnimatePresence>
         {!isCodePanelCollapsed && (
@@ -159,7 +170,7 @@ const TerraformEditor: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
-      
+
       {/* Collapsed State */}
       {isCodePanelCollapsed && (
         <div className="flex-1 flex flex-col items-center pt-4">

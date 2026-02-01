@@ -38,8 +38,8 @@ const Navbar: React.FC = () => {
               className="relative"
             >
               <div className="absolute inset-0 bg-gradient-primary blur-lg opacity-50 group-hover:opacity-75 transition-opacity" />
-              <div className="relative p-2 bg-gradient-primary rounded-xl">
-                <Cloud className="w-5 h-5 text-primary-foreground" />
+              <div className="relative p-1 bg-gradient-primary rounded-xl">
+                <img src="/logo.png" alt="Zenith Ai Logo" className="w-7 h-7 object-contain" />
               </div>
             </motion.div>
             <span className="font-bold text-lg">

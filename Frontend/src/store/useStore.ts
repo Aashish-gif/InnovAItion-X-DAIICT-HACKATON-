@@ -26,21 +26,21 @@ interface StudioState {
   nodes: Node[];
   edges: Edge[];
   selectedNode: string | null;
-  
+
   // Cost estimation
   totalCost: number;
   costBreakdown: Record<string, number>;
-  
+
   // Terraform state
   terraformCode: string;
   isEditing: boolean;
   syncStatus: 'synced' | 'syncing' | 'error';
-  
+
   // UI state
   isSidebarCollapsed: boolean;
   isCodePanelCollapsed: boolean;
   isToolsPanelCollapsed: boolean;
-  
+
   // Actions
   setNodes: (nodes: Node[]) => void;
   setEdges: (edges: Edge[]) => void;
@@ -90,6 +90,12 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   isToolsPanelCollapsed: false,
 
   setNodes: (nodes) => {
+    const currentNodes = get().nodes;
+    // Simple length and ID check to avoid unnecessary updates
+    if (nodes.length === currentNodes.length && nodes.every((n, i) => n.id === currentNodes[i]?.id && n.position.x === currentNodes[i]?.position.x && n.position.y === currentNodes[i]?.position.y)) {
+      return;
+    }
+
     // Use structuredClone for deep copy to avoid reference issues
     const newNodes = nodes.map(node => ({
       ...node,
@@ -97,13 +103,21 @@ export const useStudioStore = create<StudioState>((set, get) => ({
       position: { ...node.position }
     }));
     set({ nodes: newNodes });
-    get().calculateCosts(); // Recalculate costs when nodes change
-    // Use setTimeout to avoid blocking the UI during async operation
+    get().calculateCosts();
+
+    // Only auto-generate if we are NOT manually editing code
+    if (!get().isEditing) {
+      setTimeout(() => {
+        get().generateTerraform();
+      }, 0);
+    }
+  },
+  setEdges: (edges) => {
+    set({ edges });
     setTimeout(() => {
       get().generateTerraform();
     }, 0);
   },
-  setEdges: (edges) => set({ edges }),
   addNode: (node) => {
     const nodes = [...get().nodes, node];
     set({ nodes });
@@ -134,9 +148,9 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   toggleToolsPanel: () => set((state) => ({ isToolsPanelCollapsed: !state.isToolsPanelCollapsed })),
   updateNodeParent: (nodeId: string, parentId: string | null) => {
     set(state => ({
-      nodes: state.nodes.map(node => 
-        node.id === nodeId 
-          ? { ...node, parentNode: parentId, extent: parentId ? 'parent' as const : undefined } 
+      nodes: state.nodes.map(node =>
+        node.id === nodeId
+          ? { ...node, parentNode: parentId, extent: parentId ? 'parent' as const : undefined }
           : node
       )
     }));
@@ -154,24 +168,26 @@ export const useStudioStore = create<StudioState>((set, get) => ({
         type: node.data.type,
         config: node.data.config
       }));
-    
+
     const costResult = estimateTotalCost(resources);
-    
+
     set({
       totalCost: costResult.monthly,
       costBreakdown: costResult.breakdown
     });
   },
   async generateTerraform() {
+    // CRITICAL: Do not overwrite code if the user is currently editing it!
+    if (get().isEditing) return;
+
     set({ syncStatus: 'syncing' });
     try {
       const code = await generateTerraformFromNodes(get().nodes, get().edges);
       set({ terraformCode: code, syncStatus: 'synced' });
     } catch (error) {
       console.error('Error generating Terraform:', error);
-      set({ 
-        terraformCode: '# Error generating Terraform code\n# Please try again',
-        syncStatus: 'error' 
+      set({
+        syncStatus: 'error'
       });
     }
   },

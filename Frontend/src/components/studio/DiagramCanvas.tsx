@@ -34,29 +34,29 @@ const getId = () => `node_${id++}`;
 const DiagramCanvas: React.FC = () => {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [reactFlowInstance, setReactFlowInstance] = React.useState<ReactFlowInstance | null>(null);
-  
-  const { 
-    nodes, 
-    edges, 
-    setNodes, 
-    setEdges, 
-    addNode, 
+
+  const {
+    nodes,
+    edges,
+    setNodes,
+    setEdges,
+    addNode,
     setSelectedNode,
     isToolsPanelCollapsed,
     isCodePanelCollapsed,
     toggleToolsPanel,
     toggleCodePanel
   } = useStudioStore();
-  
+
   const [localNodes, setLocalNodes, onNodesChange] = useNodesState(nodes);
   const [localEdges, setLocalEdges, onEdgesChange] = useEdgesState(edges);
-  
+
   // Track if we're updating from store to prevent circular updates
   const isUpdatingFromStoreRef = React.useRef(false);
   const lastSyncedNodesRef = React.useRef<Node[]>(nodes);
   const lastSyncedEdgesRef = React.useRef<Edge[]>(edges);
   const isInitializedRef = React.useRef(false);
-  
+
   // Initialize local state from store on mount
   React.useEffect(() => {
     if (!isInitializedRef.current) {
@@ -67,7 +67,7 @@ const DiagramCanvas: React.FC = () => {
       isInitializedRef.current = true;
     }
   }, []);
-  
+
   // Helper to check if nodes are different (by ID and position)
   const nodesChanged = React.useCallback((a: Node[], b: Node[]) => {
     if (a.length !== b.length) return true;
@@ -83,7 +83,7 @@ const DiagramCanvas: React.FC = () => {
     }
     return false;
   }, []);
-  
+
   // Helper to check if edges are different
   const edgesChanged = React.useCallback((a: Edge[], b: Edge[]) => {
     if (a.length !== b.length) return true;
@@ -91,76 +91,79 @@ const DiagramCanvas: React.FC = () => {
     const bKeys = new Set(b.map(e => `${e.source}-${e.target}`));
     return aKeys.size !== bKeys.size || ![...aKeys].every(k => bKeys.has(k));
   }, []);
-  
+
   // Sync store nodes to local state when store changes externally (e.g., from AI generation)
   useEffect(() => {
     if (isUpdatingFromStoreRef.current) return;
-    
+
     if (nodesChanged(nodes, lastSyncedNodesRef.current)) {
       isUpdatingFromStoreRef.current = true;
       setLocalNodes(nodes);
       lastSyncedNodesRef.current = nodes;
-      
+
       setTimeout(() => {
         isUpdatingFromStoreRef.current = false;
       }, 50);
     }
   }, [nodes, setLocalNodes, nodesChanged]);
-  
+
   // Sync store edges to local state when store changes externally
   useEffect(() => {
     if (isUpdatingFromStoreRef.current) return;
-    
+
     if (edgesChanged(edges, lastSyncedEdgesRef.current)) {
       isUpdatingFromStoreRef.current = true;
       setLocalEdges(edges);
       lastSyncedEdgesRef.current = edges;
-      
+
       setTimeout(() => {
         isUpdatingFromStoreRef.current = false;
       }, 50);
     }
   }, [edges, setLocalEdges, edgesChanged]);
-  
+
   // Sync local nodes to store (user interactions)
   React.useEffect(() => {
     if (isUpdatingFromStoreRef.current) return;
-    
+
     if (nodesChanged(localNodes, lastSyncedNodesRef.current)) {
       lastSyncedNodesRef.current = localNodes;
       setNodes(localNodes);
     }
   }, [localNodes, setNodes, nodesChanged]);
-  
+
   // Sync local edges to store (user interactions)
   React.useEffect(() => {
     if (isUpdatingFromStoreRef.current) return;
-    
+
     if (edgesChanged(localEdges, lastSyncedEdgesRef.current)) {
       lastSyncedEdgesRef.current = localEdges;
       setEdges(localEdges);
     }
   }, [localEdges, setEdges, edgesChanged]);
-  
+
+  // Deletion and changes are handled by the useEffect(localNodes -> store) below
+  // We don't need explicit onNodesDelete if we are listening to all changes
+
   const onConnect = useCallback(
     (params: Connection) => {
       // Determine connection type based on node types
       const sourceNode = localNodes.find(node => node.id === params.source);
       const targetNode = localNodes.find(node => node.id === params.target);
-      
+
       let connectionType = 'private'; // default
-      
+
       if (sourceNode && targetNode) {
         // If connecting to or from a database node
         if (sourceNode.data.resourceType === 'rds' || targetNode.data.resourceType === 'rds') {
           connectionType = 'database';
-        } 
+        }
         // If connecting to internet gateway or similar public resource
         else if (sourceNode.data.resourceType === 'gateway' || targetNode.data.resourceType === 'gateway') {
           connectionType = 'public';
         }
       }
-      
+
       setLocalEdges((eds) =>
         addEdge(
           {
@@ -176,32 +179,32 @@ const DiagramCanvas: React.FC = () => {
     },
     [setLocalEdges, localNodes]
   );
-  
+
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
   }, []);
-  
+
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
-      
+
       const data = event.dataTransfer.getData('application/reactflow');
       if (!data || !reactFlowInstance || !reactFlowWrapper.current) return;
-      
+
       const resource: AWSResource = JSON.parse(data);
       const bounds = reactFlowWrapper.current.getBoundingClientRect();
       const position = reactFlowInstance.screenToFlowPosition({
         x: event.clientX - bounds.left,
         y: event.clientY - bounds.top,
       });
-      
+
       // Determine node type based on resource
       let nodeType = 'cloudComponent'; // Default to new cloud component
       if (resource.id === 'vpc' || resource.name.toLowerCase().includes('vpc')) {
         nodeType = 'vpcGroup';
       }
-      
+
       // Create detailed resource configuration based on resource type
       const resourceConfig: Record<string, any> = {
         'ec2': {
@@ -265,7 +268,7 @@ const DiagramCanvas: React.FC = () => {
           visibility_timeout_seconds: 30,
         }
       };
-      
+
       const newNode: Node = {
         id: getId(),
         type: nodeType,
@@ -280,23 +283,23 @@ const DiagramCanvas: React.FC = () => {
           config: resourceConfig[resource.id] || {},
         },
       };
-      
+
       setLocalNodes((nds) => [...nds, newNode]);
     },
     [reactFlowInstance, setLocalNodes]
   );
-  
+
   const onNodeClick = useCallback(
     (_: React.MouseEvent, node: Node) => {
       setSelectedNode(node.id);
     },
     [setSelectedNode]
   );
-  
+
   const onPaneClick = useCallback(() => {
     setSelectedNode(null);
   }, [setSelectedNode]);
-  
+
   const fitView = () => {
     reactFlowInstance?.fitView({ padding: 0.2 });
   };
@@ -305,7 +308,7 @@ const DiagramCanvas: React.FC = () => {
     // If both panels are collapsed, expand them
     // Otherwise, collapse both
     const bothCollapsed = isToolsPanelCollapsed && isCodePanelCollapsed;
-    
+
     if (bothCollapsed) {
       // Expand both panels
       if (isToolsPanelCollapsed) toggleToolsPanel();
@@ -315,7 +318,7 @@ const DiagramCanvas: React.FC = () => {
       if (!isToolsPanelCollapsed) toggleToolsPanel();
       if (!isCodePanelCollapsed) toggleCodePanel();
     }
-    
+
     // Also fit the view after toggling
     setTimeout(() => {
       reactFlowInstance?.fitView({ padding: 0.2 });
@@ -348,12 +351,12 @@ const DiagramCanvas: React.FC = () => {
         }}
         className="bg-background"
       >
-        <Background 
-          gap={24} 
-          size={1} 
+        <Background
+          gap={24}
+          size={1}
           color="hsla(220, 15%, 20%, 0.5)"
         />
-        <Controls 
+        <Controls
           className="!bg-glass !border-glass-border !rounded-xl"
           showInteractive={false}
         />
@@ -363,7 +366,7 @@ const DiagramCanvas: React.FC = () => {
           maskColor="hsla(220, 20%, 6%, 0.8)"
         />
       </ReactFlow>
-      
+
       {/* Fullscreen Toggle Button */}
       <motion.button
         whileHover={{ scale: 1.05 }}
@@ -374,7 +377,7 @@ const DiagramCanvas: React.FC = () => {
       >
         <Maximize2 className="w-4 h-4" />
       </motion.button>
-      
+
       {/* Empty State */}
       {localNodes.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

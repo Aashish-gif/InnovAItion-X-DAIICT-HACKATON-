@@ -10,8 +10,8 @@ const FooterSection: React.FC = () => {
           {/* Brand */}
           <div className="md:col-span-2">
             <Link to="/" className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-gradient-primary rounded-xl">
-                <Cloud className="w-5 h-5 text-primary-foreground" />
+              <div className="p-1 bg-gradient-primary rounded-xl">
+                <img src="/logo.png" alt="Zenith Ai Logo" className="w-7 h-7 object-contain" />
               </div>
               <span className="font-bold text-lg">Zenith Ai</span>
             </Link>

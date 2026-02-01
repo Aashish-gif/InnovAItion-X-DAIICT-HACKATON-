@@ -10,7 +10,7 @@
  */
 function generateTerraform(nodes) {
   if (!nodes || nodes.length === 0) {
-    return '# Zenith Ai - No infrastructure nodes defined\n';
+    return '';
   }
 
   // Enhanced templates map (matching the quality of ragTerraformGenerator)
@@ -87,6 +87,45 @@ resource "aws_db_instance" "${name}" {
   
   skip_final_snapshot = true
   deletion_protection = false
+  publicly_accessible = false
+
+  tags = {
+    Name        = "${label}"
+    ManagedBy   = "Zenith Ai"
+    Terraform   = "true"
+  }
+}
+`,
+    'lambda': (name, label) => `# Lambda Function: ${label}
+resource "aws_lambda_function" "${name}" {
+  function_name = "${label.toLowerCase().replace(/\s+/g, '-')}"
+  role          = aws_iam_role.lambda_role.arn
+  handler       = "index.handler"
+  runtime       = "python3.13"
+
+  filename         = "lambda_function.zip"
+  source_code_hash = filebase64sha256("lambda_function.zip")
+
+  tags = {
+    Name        = "${label}"
+    ManagedBy   = "Zenith Ai"
+    Terraform   = "true"
+  }
+}
+
+resource "aws_iam_role" "lambda_role" {
+  name = "lambda-${name}-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{ Action = "sts:AssumeRole", Effect = "Allow", Principal = { Service = "lambda.amazonaws.com" } }]
+  })
+}
+`,
+    'vpc': (name, label) => `# VPC: ${label}
+resource "aws_vpc" "${name}" {
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_hostnames = true
+  enable_dns_support   = true
 
   tags = {
     Name        = "${label}"
@@ -125,8 +164,8 @@ provider "aws" {
   // Process each node
   nodes.forEach((node, index) => {
     const nodeId = (node.id || `resource_${index}`).replace(/[^a-z0-9_]/g, '_');
-    const nodeType = (node.type || node.data?.type || '').toLowerCase();
-    const nodeLabel = node.data?.label || nodeId;
+    const nodeType = (node.type || (node.data && node.data.type) || '').toLowerCase();
+    const nodeLabel = (node.data && node.data.label) || nodeId;
 
     if (templates[nodeType]) {
       terraformCode += templates[nodeType](nodeId, nodeLabel) + '\n';
@@ -200,8 +239,48 @@ function runSecurityAudit(code) {
     warnings.push({
       level: 'HIGH',
       type: 'SECURITY_GROUP',
-      message: 'High-risk security issue detected: Open security group rule (0.0.0.0/0) allows access from anywhere on the internet',
-      recommendation: 'Restrict CIDR blocks to specific IP ranges or use security group references instead of 0.0.0.0/0'
+      message: 'Open security group rule detected: (0.0.0.0/0) allows access from anywhere on the internet.',
+      recommendation: 'Restrict CIDR blocks to specific IP ranges or use security group references.'
+    });
+  }
+
+  // Check for public S3 buckets
+  if (code.includes('acl = "public-read"') || code.includes('acl = "public-read-write"')) {
+    warnings.push({
+      level: 'CRITICAL',
+      type: 'S3_BUCKET',
+      message: 'Publicly accessible S3 bucket detected.',
+      recommendation: 'Change ACL to "private" and use CloudFront or Bucket Policies for controlled access.'
+    });
+  }
+
+  // Check for unencrypted volumes
+  if (code.includes('aws_instance') && !code.includes('encrypted = true')) {
+    warnings.push({
+      level: 'MEDIUM',
+      type: 'EC2_STORAGE',
+      message: 'Unencrypted EBS volumes detected for EC2 instance.',
+      recommendation: 'Enable EBS encryption at the account level or specifically for each volume block.'
+    });
+  }
+
+  // Check for public RDS
+  if (code.includes('publicly_accessible = true')) {
+    warnings.push({
+      level: 'HIGH',
+      type: 'RDS_EXPOSURE',
+      message: 'RDS database is set to publicly accessible.',
+      recommendation: 'Set publicly_accessible = false and use a VPN or Bastion host for administrative access.'
+    });
+  }
+
+  // Check for IAM wildcard permissions
+  if (code.includes('"Action": "*"') || code.includes('"Action": ["*"]') || code.includes('Action = "*"')) {
+    warnings.push({
+      level: 'HIGH',
+      type: 'IAM_WILDCARD',
+      message: 'IAM policy with wildcard permissions detected.',
+      recommendation: 'Follow the principle of least privilege and specify only the required actions.'
     });
   }
 
@@ -211,7 +290,7 @@ function runSecurityAudit(code) {
     errors: errors,
     summary: {
       totalIssues: warnings.length + errors.length,
-      highRisk: warnings.filter(w => w.level === 'HIGH').length,
+      highRisk: warnings.filter(w => w.level === 'HIGH' || w.level === 'CRITICAL').length,
       mediumRisk: warnings.filter(w => w.level === 'MEDIUM').length,
       lowRisk: warnings.filter(w => w.level === 'LOW').length
     }

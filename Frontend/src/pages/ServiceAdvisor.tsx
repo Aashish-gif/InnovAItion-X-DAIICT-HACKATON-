@@ -4,7 +4,7 @@ import { GlassCard } from '@/components/ui/GlassCard';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Lightbulb, Compass, Loader2, DollarSign, Activity, CheckCircle2 } from 'lucide-react';
+import { Lightbulb, Compass, Loader2, DollarSign, Activity, CheckCircle2, Zap } from 'lucide-react';
 import { recommendationApi, ServiceSuggestion } from '@/lib/api';
 import { motion } from 'framer-motion';
 
@@ -143,11 +143,25 @@ const ServiceAdvisor = () => {
                                         </div>
                                     </div>
 
-                                    <div className="prose prose-invert max-w-none">
-                                        <h3 className="text-lg font-semibold mb-2">Why this service?</h3>
-                                        <p className="text-muted-foreground leading-relaxed">
-                                            {suggestion.reason}
-                                        </p>
+                                    <div className="prose prose-invert max-w-none space-y-4">
+                                        <div>
+                                            <h3 className="text-lg font-semibold mb-2">Why this service?</h3>
+                                            <p className="text-muted-foreground leading-relaxed">
+                                                {suggestion.reason}
+                                            </p>
+                                        </div>
+
+                                        {suggestion.tips && (
+                                            <div className="mt-4 p-4 border-l-4 border-primary bg-primary/10 rounded-r-lg">
+                                                <h4 className="text-sm font-bold text-primary flex items-center gap-2 mb-1">
+                                                    <Zap className="w-4 h-4" />
+                                                    Architect's Pro-Tip
+                                                </h4>
+                                                <p className="text-sm italic text-muted-foreground">
+                                                    "{suggestion.tips}"
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </GlassCard>
