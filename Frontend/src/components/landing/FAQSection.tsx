@@ -11,8 +11,8 @@ import { GlassCard } from '@/components/ui/GlassCard';
 
 const faqs = [
   {
-    question: 'What is Zenith?',
-    answer: 'Zenith is a visual infrastructure design tool that allows you to design cloud architectures by dragging and dropping AWS resources. The tool automatically generates Terraform code in real-time, making it easy to create production-ready infrastructure without writing code manually.',
+    question: 'What is Zenith Ai?',
+    answer: 'Zenith Ai is a visual infrastructure design tool that allows you to design cloud architectures by dragging and dropping AWS resources. The tool automatically generates Terraform code in real-time, making it easy to create production-ready infrastructure without writing code manually.',
   },
   {
     question: 'How does the drag-and-drop interface work?',
@@ -20,27 +20,27 @@ const faqs = [
   },
   {
     question: 'Can I edit the generated Terraform code?',
-    answer: 'Yes! Zenith supports bi-directional sync. You can edit either the visual diagram or the Terraform code directly, and both will stay in sync. This gives you the flexibility to fine-tune your infrastructure as needed.',
+    answer: 'Yes! Zenith Ai supports bi-directional sync. You can edit either the visual diagram or the Terraform code directly, and both will stay in sync. This gives you the flexibility to fine-tune your infrastructure as needed.',
   },
   {
     question: 'What AWS resources are supported?',
-    answer: 'Zenith supports a wide range of AWS resources including EC2 instances, VPCs, RDS databases, S3 buckets, Lambda functions, API Gateway, and many more. We continuously add support for additional AWS services.',
+    answer: 'Zenith Ai supports a wide range of AWS resources including EC2 instances, VPCs, RDS databases, S3 buckets, Lambda functions, API Gateway, and many more. We continuously add support for additional AWS services.',
   },
   {
     question: 'Can I deploy directly to AWS?',
-    answer: 'Yes! Zenith includes one-click deployment functionality. Once you\'re satisfied with your architecture design, you can deploy it directly to your AWS account with automated state management.',
+    answer: 'Yes! Zenith Ai includes one-click deployment functionality. Once you\'re satisfied with your architecture design, you can deploy it directly to your AWS account with automated state management.',
   },
   {
     question: 'Is my data secure?',
     answer: 'Absolutely. We take security seriously. All your projects and data are encrypted, and we follow industry best practices for data protection. You have full control over your infrastructure designs and can export your Terraform code at any time.',
   },
   {
-    question: 'Do I need AWS credentials to use Zenith?',
+    question: 'Do I need AWS credentials to use Zenith Ai?',
     answer: 'You can design and generate Terraform code without AWS credentials. However, to deploy your infrastructure to AWS, you\'ll need to provide your AWS credentials securely through our deployment interface.',
   },
   {
-    question: 'Is Zenith free to use?',
-    answer: 'Zenith offers a free tier for getting started. For advanced features and production deployments, we offer various pricing plans. Check our pricing page for more details.',
+    question: 'Is Zenith Ai free to use?',
+    answer: 'Zenith Ai offers a free tier for getting started. For advanced features and production deployments, we offer various pricing plans. Check our pricing page for more details.',
   },
 ];
 
@@ -65,7 +65,7 @@ const FAQSection: React.FC = () => {
             </h2>
           </div>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Everything you need to know about Zenith and how it works.
+            Everything you need to know about Zenith Ai and how it works.
           </p>
         </motion.div>
 

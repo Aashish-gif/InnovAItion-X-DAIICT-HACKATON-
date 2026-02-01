@@ -43,7 +43,7 @@ const Navbar: React.FC = () => {
               </div>
             </motion.div>
             <span className="font-bold text-lg">
-              Zenith
+              Zenith Ai
             </span>
           </Link>
 

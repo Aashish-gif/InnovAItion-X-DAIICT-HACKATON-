@@ -46,7 +46,7 @@ const BudgetAnalysis = () => {
         <header className="mb-8">
           <h1 className="text-3xl font-bold flex items-center gap-3">
             <PieChart className="w-8 h-8 text-primary" />
-            Zenith <span className="gradient-text">Analysis</span>
+            Zenith Ai <span className="gradient-text">Analysis</span>
           </h1>
           <p className="text-muted-foreground mt-2">
             Enter your constraints to receive an optimized AWS service stack suggestion.

@@ -13,7 +13,7 @@ const FooterSection: React.FC = () => {
               <div className="p-2 bg-gradient-primary rounded-xl">
                 <Cloud className="w-5 h-5 text-primary-foreground" />
               </div>
-              <span className="font-bold text-lg">CloudArchitect</span>
+              <span className="font-bold text-lg">Zenith Ai</span>
             </Link>
             <p className="text-muted-foreground text-sm max-w-xs mb-6">
               Design cloud infrastructure visually. Terraform code writes itself.
@@ -31,7 +31,7 @@ const FooterSection: React.FC = () => {
               </a>
             </div>
           </div>
-          
+
           {/* Links */}
           <div>
             <h4 className="font-semibold mb-4">Product</h4>
@@ -42,7 +42,7 @@ const FooterSection: React.FC = () => {
               <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Roadmap</a></li>
             </ul>
           </div>
-          
+
           <div>
             <h4 className="font-semibold mb-4">Resources</h4>
             <ul className="space-y-3 text-sm">
@@ -53,10 +53,10 @@ const FooterSection: React.FC = () => {
             </ul>
           </div>
         </div>
-        
+
         <div className="mt-12 pt-8 border-t border-glass-border flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
-            © 2025 CloudArchitect. All rights reserved.
+            © 2026 Zenith Ai. All rights reserved.
           </p>
           <div className="flex items-center gap-6 text-sm">
             <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Privacy</a>

@@ -61,7 +61,7 @@ resource "aws_instance" "{{name}}" {
   tags = {
     Name        = "{{name}}"
     Environment = var.environment
-    ManagedBy   = "CloudArchitectAI"
+    ManagedBy   = "Zenith Ai"
     Terraform   = "true"
     Application = var.application_name
   }
@@ -187,7 +187,7 @@ resource "aws_iam_role_policy_attachment" "ec2_cloudwatch_policy" {
   tags = {
     Name        = "web-server"
     Environment = var.environment
-    ManagedBy   = "CloudArchitectAI"
+    ManagedBy   = "Zenith Ai"
     Terraform   = "true"
     Application = var.application_name
   }
@@ -218,7 +218,7 @@ resource "aws_s3_bucket" "{{name}}" {
   tags = {
     Name        = "{{name}}"
     Environment = var.environment
-    ManagedBy   = "CloudArchitectAI"
+    ManagedBy   = "Zenith Ai"
     Terraform   = "true"
     Application = var.application_name
   }
@@ -399,7 +399,7 @@ resource "aws_cloudwatch_event_rule" "{{name}}_s3_events" {
   tags = {
     Name        = "image-storage"
     Environment = var.environment
-    ManagedBy   = "CloudArchitectAI"
+    ManagedBy   = "Zenith Ai"
     Terraform   = "true"
     Application = var.application_name
   }
@@ -470,7 +470,7 @@ resource "aws_vpc" "{{name}}" {
   tags = {
     Name        = "{{name}}"
     Environment = var.environment
-    ManagedBy   = "CloudArchitectAI"
+    ManagedBy   = "Zenith Ai"
     Terraform   = "true"
     Application = var.application_name
   }
@@ -760,7 +760,7 @@ resource "aws_vpc_dhcp_options_association" "{{name}}_dhcp_assoc" {
   tags = {
     Name        = "main"
     Environment = var.environment
-    ManagedBy   = "CloudArchitectAI"
+    ManagedBy   = "Zenith Ai"
     Terraform   = "true"
     Application = var.application_name
   }
@@ -849,7 +849,7 @@ resource "aws_security_group" "{{name}}" {
   tags = {
     Name        = "{{name}}"
     Environment = var.environment
-    ManagedBy   = "CloudArchitectAI"
+    ManagedBy   = "Zenith Ai"
     Terraform   = "true"
     Application = var.application_name
   }
@@ -914,7 +914,7 @@ resource "aws_security_group_rule" "{{name}}_rule" {
   tags = {
     Name        = "web-sg"
     Environment = var.environment
-    ManagedBy   = "CloudArchitectAI"
+    ManagedBy   = "Zenith Ai"
     Terraform   = "true"
     Application = var.application_name
   }
@@ -1001,7 +1001,7 @@ resource "aws_db_instance" "{{name}}" {
   tags = {
     Name        = "{{name}}"
     Environment = var.environment
-    ManagedBy   = "CloudArchitectAI"
+    ManagedBy   = "Zenith Ai"
     Terraform   = "true"
     Application = var.application_name
   }
@@ -1167,7 +1167,7 @@ resource "aws_sns_topic" "rds_notifications" {
   tags = {
     Name        = "main-postgres"
     Environment = var.environment
-    ManagedBy   = "CloudArchitectAI"
+    ManagedBy   = "Zenith Ai"
     Terraform   = "true"
     Application = var.application_name
   }
@@ -1247,7 +1247,7 @@ resource "aws_lambda_function" "{{name}}" {
   tags = {
     Name        = "{{name}}"
     Environment = var.environment
-    ManagedBy   = "CloudArchitectAI"
+    ManagedBy   = "Zenith Ai"
     Terraform   = "true"
     Application = var.application_name
   }
@@ -1374,7 +1374,7 @@ resource "aws_security_group" "{{name}}_lambda_sg" {
   tags = {
     Name        = "{{name}}-lambda-sg"
     Environment = var.environment
-    ManagedBy   = "CloudArchitectAI"
+    ManagedBy   = "Zenith Ai"
     Terraform   = "true"
     Application = var.application_name
   }
@@ -1416,7 +1416,7 @@ resource "aws_security_group" "{{name}}_ec2_sg" {
   tags = {
     Name        = "{{name}}-ec2-sg"
     Environment = var.environment
-    ManagedBy   = "CloudArchitectAI"
+    ManagedBy   = "Zenith Ai"
     Terraform   = "true"
     Application = var.application_name
   }
@@ -1495,7 +1495,7 @@ resource "aws_lambda_function_url" "{{name}}_url" {
   tags = {
     Name        = "api-handler"
     Environment = var.environment
-    ManagedBy   = "CloudArchitectAI"
+    ManagedBy   = "Zenith Ai"
     Terraform   = "true"
     Application = var.application_name
   }
@@ -1552,7 +1552,7 @@ resource "aws_security_group" "lambda_api_sg" {
   tags = {
     Name        = "lambda-api-sg"
     Environment = var.environment
-    ManagedBy   = "CloudArchitectAI"
+    ManagedBy   = "Zenith Ai"
     Terraform   = "true"
     Application = var.application_name
   }
@@ -1610,7 +1610,7 @@ resource "aws_iam_role" "{{name}}" {
   tags = {
     Name        = "{{name}}"
     Environment = var.environment
-    ManagedBy   = "CloudArchitectAI"
+    ManagedBy   = "Zenith Ai"
     Terraform   = "true"
     Application = var.application_name
   }
@@ -1718,7 +1718,7 @@ resource "aws_cloudwatch_log_group" "{{name}}_activity_logs" {
   tags = {
     Name        = "api-lambda-role"
     Environment = var.environment
-    ManagedBy   = "CloudArchitectAI"
+    ManagedBy   = "Zenith Ai"
     Terraform   = "true"
     Application = var.application_name
   }
@@ -1768,7 +1768,7 @@ const findBestMatch = (resourceType: string): string | null => {
   if (knowledgeBase[resourceType]) {
     return resourceType;
   }
-  
+
   // Try to find a partial match
   const keys = Object.keys(knowledgeBase);
   for (const key of keys) {
@@ -1776,20 +1776,20 @@ const findBestMatch = (resourceType: string): string | null => {
       return key;
     }
   }
-  
+
   return null;
 };
 
 // Simple template engine to replace placeholders
 const renderTemplate = (template: string, data: any): string => {
   let result = template;
-  
+
   // Replace simple placeholders
   Object.entries(data).forEach(([key, value]) => {
     const placeholder = new RegExp(`{{${key}}}`, 'g');
     result = result.replace(placeholder, String(value));
   });
-  
+
   // Handle conditional blocks (simple implementation)
   const conditionalRegex = /{{#(\w+)}}([\s\S]*?){{\/\1}}/g;
   result = result.replace(conditionalRegex, (match, condition, content) => {
@@ -1805,12 +1805,12 @@ const renderTemplate = (template: string, data: any): string => {
     }
     return '';
   });
-  
+
   return result;
 };
 
 /**
- * Generates Terraform code using RAG (Retrieval Augmented Generation) approach
+ * Generates Terraform code using Zenith Ai logic
  * @param nodes - The nodes from the ReactFlow diagram
  * @returns Generated Terraform code
  */
@@ -1818,7 +1818,7 @@ import { Edge } from 'reactflow';
 
 export const generateTerraformWithRag = async (nodes: Node[], edges?: Edge[]): Promise<string> => {
   if (nodes.length === 0) {
-    return `# Cloud Architect - Terraform Configuration
+    return `# Zenith Ai - Terraform Configuration
 # Drag AWS resources to the canvas to generate code
 
 terraform {
@@ -1836,7 +1836,7 @@ provider "aws" {
     tags = {
       Environment = var.environment
       Application = var.application_name
-      ManagedBy   = "CloudArchitectAI"
+      ManagedBy   = "Zenith Ai"
       Terraform   = "true"
     }
   }
@@ -1894,9 +1894,8 @@ variable "vpc_cidr_block" {
 `;
   }
 
-  let terraformCode = `# Generated by Cloud Architect AI
-# Cloud Architect - Terraform Configuration
-# Generated using RAG (Retrieval Augmented Generation)
+  let terraformCode = `# Generated by Zenith Ai
+# Zenith Ai - Terraform Configuration
 # Modern Infrastructure as Code Practices (2026)
 
 terraform {
@@ -1917,7 +1916,7 @@ provider "aws" {
     tags = {
       Environment = var.environment
       Application = var.application_name
-      ManagedBy   = "CloudArchitectAI"
+      ManagedBy   = "Zenith Ai"
       Terraform   = "true"
     }
   }
@@ -1974,9 +1973,9 @@ variable "vpc_cidr_block" {
 `;
 
   // First, handle VPC resources (as they are typically dependencies)
-  const vpcNodes = nodes.filter(node => 
-    node.data?.terraformType === 'aws_vpc' || 
-    node.data?.type === 'vpc' || 
+  const vpcNodes = nodes.filter(node =>
+    node.data?.terraformType === 'aws_vpc' ||
+    node.data?.type === 'vpc' ||
     node.type === 'vpcGroup'
   );
 
@@ -1984,7 +1983,7 @@ variable "vpc_cidr_block" {
     const resourceData = node.data as any;
     const resourceName = resourceData.label.toLowerCase().replace(/[^a-z0-9]/g, '_');
     const config = resourceData.config || {};
-    
+
     const matchedType = findBestMatch(resourceData.terraformType || 'aws_vpc');
     if (matchedType) {
       const templateData = {
@@ -1999,16 +1998,16 @@ variable "vpc_cidr_block" {
         private_cidr_block_1: config.private_cidr_block_1 || '10.0.3.0/24',
         private_cidr_block_2: config.private_cidr_block_2 || '10.0.4.0/24',
       };
-      
+
       const resourceCode = renderTemplate(knowledgeBase[matchedType].terraformTemplate, templateData);
       terraformCode += resourceCode + '\n\n';
     }
   }
 
   // Then handle other resources
-  const otherNodes = nodes.filter(node => 
-    node.data?.terraformType !== 'aws_vpc' && 
-    node.data?.type !== 'vpc' && 
+  const otherNodes = nodes.filter(node =>
+    node.data?.terraformType !== 'aws_vpc' &&
+    node.data?.type !== 'vpc' &&
     node.type !== 'vpcGroup'
   );
 
@@ -2016,7 +2015,7 @@ variable "vpc_cidr_block" {
     const resourceData = node.data as any;
     const resourceName = resourceData.label.toLowerCase().replace(/[^a-z0-9]/g, '_');
     const config = resourceData.config || {};
-    
+
     const matchedType = findBestMatch(resourceData.terraformType);
     if (matchedType) {
       // Prepare data for template
@@ -2202,23 +2201,23 @@ output "lambda_function_names" {
   // Process edges to generate networking resources
   if (edges && edges.length > 0) {
     terraformCode += '\n# Networking Resources based on Connections\n';
-    
+
     for (const edge of edges) {
       const sourceNode = nodes.find(n => n.id === edge.source);
       const targetNode = nodes.find(n => n.id === edge.target);
-      
+
       if (sourceNode && targetNode) {
         const sourceData = sourceNode.data as any;
         const targetData = targetNode.data as any;
-        
+
         // Determine the type of connection and generate appropriate networking resources
         const connectionResources = generateNetworkingResources(
-          sourceData, 
-          targetData, 
-          sourceNode.id, 
+          sourceData,
+          targetData,
+          sourceNode.id,
           targetNode.id
         );
-        
+
         terraformCode += connectionResources + '\n';
       }
     }
@@ -2231,26 +2230,26 @@ output "lambda_function_names" {
  * Generates networking resources based on the connection between two nodes
  */
 const generateNetworkingResources = (
-  sourceData: any, 
-  targetData: any, 
-  sourceNodeId: string, 
+  sourceData: any,
+  targetData: any,
+  sourceNodeId: string,
   targetNodeId: string
 ): string => {
   const sourceType = sourceData.terraformType || sourceData.type;
   const targetType = targetData.terraformType || targetData.type;
-  
+
   // Normalize node IDs to resource names
   const sourceResourceName = sourceData.label.toLowerCase().replace(/[^a-z0-9]/g, '_');
   const targetResourceName = targetData.label.toLowerCase().replace(/[^a-z0-9]/g, '_');
-  
+
   let networkingCode = '';
-  
+
   // Define connection mapping to determine necessary networking resources
-  if ((sourceType === 'aws_lambda_function' || sourceType === 'lambda') && 
-      (targetType === 'aws_instance' || targetType === 'ec2' || targetType === 'aws_db_instance' || targetType === 'rds')) {
+  if ((sourceType === 'aws_lambda_function' || sourceType === 'lambda') &&
+    (targetType === 'aws_instance' || targetType === 'ec2' || targetType === 'aws_db_instance' || targetType === 'rds')) {
     // Lambda to EC2/RDS connection - need security group rules
     networkingCode += '# Security Group Rules for connection from ' + sourceResourceName + ' to ' + targetResourceName + '\n';
-    
+
     // Inbound rule on target (EC2/RDS) to allow traffic from Lambda
     networkingCode += 'resource "aws_security_group_rule" "' + targetResourceName + '_from_' + sourceResourceName + '_ingress" {\n';
     networkingCode += '  type                     = "ingress"\n';
@@ -2261,7 +2260,7 @@ const generateNetworkingResources = (
     networkingCode += '  to_port                  = 8080\n';
     networkingCode += '  description              = "Allow traffic from ' + sourceResourceName + ' to ' + targetResourceName + '"\n';
     networkingCode += '}\n\n';
-    
+
     // If target is RDS, we might need a different port
     if (targetType === 'aws_db_instance' || targetType === 'rds') {
       networkingCode += 'resource "aws_security_group_rule" "' + targetResourceName + '_from_' + sourceResourceName + '_ingress_db" {\n';
@@ -2274,8 +2273,8 @@ const generateNetworkingResources = (
       networkingCode += '  description              = "Allow DB traffic from ' + sourceResourceName + '"\n';
       networkingCode += '}\n\n';
     }
-  } else if ((sourceType === 'aws_instance' || sourceType === 'ec2') && 
-             (targetType === 'aws_db_instance' || targetType === 'rds')) {
+  } else if ((sourceType === 'aws_instance' || sourceType === 'ec2') &&
+    (targetType === 'aws_db_instance' || targetType === 'rds')) {
     // EC2 to RDS connection
     networkingCode += '# Security Group Rules for connection from ' + sourceResourceName + ' to ' + targetResourceName + '\n';
     networkingCode += 'resource "aws_security_group_rule" "' + targetResourceName + '_from_' + sourceResourceName + '_ingress" {\n';
@@ -2287,8 +2286,8 @@ const generateNetworkingResources = (
     networkingCode += '  to_port                  = 5432\n';
     networkingCode += '  description              = "Allow DB traffic from ' + sourceResourceName + '"\n';
     networkingCode += '}\n\n';
-  } else if ((sourceType === 'aws_lb' || sourceType === 'load_balancer') && 
-             (targetType === 'aws_instance' || targetType === 'ec2')) {
+  } else if ((sourceType === 'aws_lb' || sourceType === 'load_balancer') &&
+    (targetType === 'aws_instance' || targetType === 'ec2')) {
     // Load Balancer to EC2 connection
     networkingCode += '# Security Group Rules for connection from load balancer to ' + targetResourceName + '\n';
     networkingCode += 'resource "aws_security_group_rule" "' + targetResourceName + '_from_lb_ingress" {\n';
@@ -2305,7 +2304,7 @@ const generateNetworkingResources = (
     networkingCode += '# Connection from ' + sourceResourceName + ' to ' + targetResourceName + ' - Manual configuration may be needed\n';
     networkingCode += '# Connection type: ' + sourceType + ' -> ' + targetType + '\n\n';
   }
-  
+
   return networkingCode;
 };
 
@@ -2322,7 +2321,7 @@ export const generateTerraformWithLLM = async (
   // 1. Convert nodes to a structured format
   // 2. Call an LLM API with the structured data and context
   // 3. Process the LLM response to generate Terraform
-  
+
   // For now, we'll use the RAG approach as the foundation
   // but in a real implementation, this would be replaced with actual LLM call
   return await generateTerraformWithRag(nodes);
