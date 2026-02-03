@@ -1,4 +1,4 @@
-# InnovAItion 🚀
+# Zenith AI 🚀
 ### *Where Infrastructure Meets Innovation*
 
 [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
@@ -7,7 +7,7 @@
 [![AWS](https://img.shields.io/badge/AWS-232F3E?style=for-the-badge&logo=amazon-aws&logoColor=white)](https://aws.amazon.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
-InnovAItion is a state-of-the-art cloud infrastructure automation platform. Build, visualize, and deploy production-ready AWS environments using a powerful drag-and-drop canvas and AI-driven code generation.
+Zenith AI is a state-of-the-art cloud infrastructure automation platform. Build, visualize, and deploy production-ready AWS environments using a powerful drag-and-drop canvas and AI-driven code generation.
 
 ---
 
@@ -21,23 +21,75 @@ InnovAItion is a state-of-the-art cloud infrastructure automation platform. Buil
 
 ---
 
-## 🎨 Visual Tour (Wireframes)
+## 🎨 Application Blueprints (Real Wireframes)
 
-### 1. The Welcome Experience
-A minimalist, high-tech landing page designed to guide users into the world of automated infrastructure.
-![Landing Page Mockup](assets/images/landing_page_mockup.png)
+### 1. Platform Architecture
+This blueprint illustrates the core communication flow between the Frontend React components, the Node.js backend, and the AI IaC Engine.
+
+```mermaid
+graph TD
+    subgraph "Frontend (React 18)"
+        A["Landing Page"] --> B["Studio Canvas (ReactFlow)"]
+        B --> C["AI Generation Sidebar"]
+        B --> D["Cloud Component Library"]
+    end
+
+    subgraph "Backend (Node.js/Express)"
+        B <--> E["API Gateway"]
+        E <--> F["Project Manager"]
+        E <--> G["IaC Engine (Terraform Gen)"]
+    end
+
+    subgraph "Storage & Cloud"
+        F <--> H[("MongoDB (Metadata)")]
+        G --> I["AWS (Deployment)"]
+    end
+
+    style A fill:#f9f,stroke:#333,stroke-width:2px
+    style B fill:#bbf,stroke:#333,stroke-width:4px
+    style G fill:#dfd,stroke:#333,stroke-width:2px
+```
 
 ---
 
-### 2. Intelligent Canvas Editor
-The heart of InnovAItion. Drag AWS components, connect them visually, and watch the Terraform code build itself in real-time.
-![Canvas Editor Mockup](assets/images/canvas_editor_mockup.png)
+### 2. Infrastructure Generation Flow
+The "Sorted & Smooth" logic behind how visual connections on the canvas are translated into production-ready Terraform code.
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant C as Canvas (ReactFlow)
+    participant E as IaC Engine
+    participant AI as RAG Processor
+
+    U->>C: Drag EC2 & S3
+    U->>C: Connect EC2 -> S3
+    C->>AI: Analyze Node Metadata
+    AI->>E: Map Icons to HCL Resources
+    E->>E: Generate Security Group Rules
+    E-->>C: Update Real-time Code Preview
+    U->>C: Click 'Deploy'
+    C->>E: Execute Terraform Plan
+```
 
 ---
 
-### 3. AI-Powered Workflow
-Leverage Natural Language to generate complex cloud architectures instantly using our RAG-enhanced AI engine.
-![AI Workflow Mockup](assets/images/ai_workflow_mockup.png)
+### 3. AI Text-to-Cloud Workflow
+A technical wireframe of our RAG (Retrieval Augmented Generation) pipeline.
+
+```mermaid
+flowchart LR
+    User([User Prompt]) --> NLP[NLP Interpreter]
+    NLP --> KB[(Cloud Pattern KB)]
+    KB --> Gen[RAG Code Generator]
+    Gen --> Canvas[Visual Representation]
+    Canvas --> Code[HCL Terraform]
+
+    subgraph "Sorted Automation"
+    KB
+    Gen
+    end
+```
 
 ---
 
@@ -91,10 +143,10 @@ npm start
 
 ## 📞 Support & Community
 
-*Developed for the InnovAItion-X DAIICT Hackathon.*
+*Developed for the Zenith AI-X DAIICT Hackathon.*
 
 - **Support**: Reach out via GitHub Issues.
 - **Contributions**: Pull requests are welcome!
 
 ---
-© 2026 InnovAItion Team. All Rights Reserved.
+© 2026 Zenith AI Team. All Rights Reserved.
